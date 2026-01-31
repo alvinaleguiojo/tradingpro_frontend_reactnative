@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Trading Pro",
+    "slug": "mobile-trading-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0D1421"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.tradingpro.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0D1421"
+      }
+    },
+    "web": {
+    }
+  }
+}

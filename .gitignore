@@ -1,0 +1,25 @@
+node_modules/
+.expo/
+dist/
+npm-debug.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+.env
+.env.local
+.env.production
+
+# macOS
+.DS_Store
+
+# Temporary files
+*.log
+*.tmp
+
+# Build outputs
+android/app/build/
+ios/build/

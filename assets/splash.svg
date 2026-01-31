@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1284" height="2778" viewBox="0 0 1284 2778" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1284" height="2778" fill="#0D1421"/>
+  <rect x="442" y="1139" width="400" height="400" rx="48" fill="#1E293B"/>
+  <path d="M542 1439L618 1363L678 1423L758 1283" stroke="#00D4AA" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="758" cy="1283" r="24" fill="#00D4AA"/>
+  <text x="642" y="1639" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Trading</text>
+  <text x="642" y="1719" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="#00D4AA" text-anchor="middle">Pro</text>
+</svg>
