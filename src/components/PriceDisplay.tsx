@@ -1,13 +1,14 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, StyleSheet } from 'react-native';
+import { View, Text, Animated, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { PriceData } from '../types';
 
 interface PriceDisplayProps {
   priceData: PriceData;
+  onChartPress?: () => void;
 }
 
-const PriceDisplay: React.FC<PriceDisplayProps> = ({ priceData }) => {
+const PriceDisplay: React.FC<PriceDisplayProps> = ({ priceData, onChartPress }) => {
   const flashAnim = useRef(new Animated.Value(0)).current;
   
   // Safe number helper
@@ -72,6 +73,14 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ priceData }) => {
             {isUp ? '+' : ''}{safeChangePercent.toFixed(2)}%
           </Text>
         </View>
+
+        {/* Open Chart Button */}
+        {onChartPress && (
+          <TouchableOpacity style={styles.chartButton} onPress={onChartPress}>
+            <Ionicons name="stats-chart" size={16} color="#00D4AA" />
+            <Text style={styles.chartButtonText}>Chart</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Main Price */}
@@ -285,6 +294,21 @@ const styles = StyleSheet.create({
     height: 20,
     backgroundColor: '#3B4A5E',
     marginHorizontal: 16,
+  },
+  chartButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 212, 170, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginLeft: 8,
+  },
+  chartButtonText: {
+    color: '#00D4AA',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
   },
 });
 

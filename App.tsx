@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ScrollView, StatusBar, StyleSheet, Alert } from 'react-native';
+import { ScrollView, StatusBar, StyleSheet, Alert, Modal, View, Text, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import {
   Header,
   AccountCard,
+  PriceDisplay,
   TradingButtons,
   TradeHistory,
   TradeModal,
@@ -49,6 +50,7 @@ export default function App(): React.JSX.Element {
   const [tradeType, setTradeType] = useState<TradeType | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('trade');
   const [isMoneyManagementVisible, setMoneyManagementVisible] = useState<boolean>(false);
+  const [isChartVisible, setChartVisible] = useState<boolean>(false);
 
   // Check for OTA updates automatically
   const { isChecking: isCheckingUpdate, isDownloading: isDownloadingUpdate } = useAppUpdate();
@@ -450,11 +452,9 @@ export default function App(): React.JSX.Element {
                 dailyProfit={dailyRealizedProfit}
                 onMoneyManagementPress={() => setMoneyManagementVisible(true)}
               />
-              <TradingChart 
-                symbol="OANDA:XAUUSD" 
-                interval="15" 
-                theme="dark" 
-                height={350}
+              <PriceDisplay 
+                priceData={priceData} 
+                onChartPress={() => setChartVisible(true)}
               />
               <TradingButtons 
                 onBuy={() => handleTrade('BUY')} 
@@ -493,6 +493,32 @@ export default function App(): React.JSX.Element {
             visible={isMoneyManagementVisible}
             onClose={() => setMoneyManagementVisible(false)}
           />
+
+          {/* Full Screen Chart Modal */}
+          <Modal
+            visible={isChartVisible}
+            animationType="slide"
+            presentationStyle="fullScreen"
+            onRequestClose={() => setChartVisible(false)}
+          >
+            <View style={styles.chartModalContainer}>
+              <View style={styles.chartModalHeader}>
+                <Text style={styles.chartModalTitle}>XAUUSD Chart</Text>
+                <TouchableOpacity 
+                  style={styles.chartCloseButton}
+                  onPress={() => setChartVisible(false)}
+                >
+                  <Text style={styles.chartCloseButtonText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <TradingChart 
+                symbol="OANDA:XAUUSD" 
+                interval="15" 
+                theme="dark" 
+                height={Dimensions.get('window').height - 100}
+              />
+            </View>
+          </Modal>
         </SafeAreaView>
       </LinearGradient>
     </SafeAreaProvider>
@@ -513,5 +539,35 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
     paddingHorizontal: 16,
+  },
+  chartModalContainer: {
+    flex: 1,
+    backgroundColor: '#0D1421',
+  },
+  chartModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingTop: 50,
+    backgroundColor: '#1E293B',
+  },
+  chartModalTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  chartCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chartCloseButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
   },
 });
