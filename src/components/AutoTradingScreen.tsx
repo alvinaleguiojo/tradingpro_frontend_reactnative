@@ -269,7 +269,12 @@ export const AutoTradingScreen: React.FC<AutoTradingScreenProps> = ({ onBack }) 
         </View>
 
         {/* Scalping Mode Toggle Card */}
-        <View style={[styles.card, scalpingStatus?.enabled && styles.scalpingActiveCard]}>
+        <TouchableOpacity 
+          style={[styles.card, scalpingStatus?.enabled && styles.scalpingActiveCard]}
+          onPress={handleToggleScalpingMode}
+          disabled={togglingScalping}
+          activeOpacity={0.7}
+        >
           <View style={styles.cardHeader}>
             <Ionicons name="rocket" size={24} color={scalpingStatus?.enabled ? '#FF5722' : '#FFD700'} />
             <Text style={styles.cardTitle}>
@@ -315,7 +320,7 @@ export const AutoTradingScreen: React.FC<AutoTradingScreenProps> = ({ onBack }) 
               </View>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
 
         {/* Quick Actions */}
         <View style={styles.actionsRow}>
