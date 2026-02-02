@@ -28,6 +28,8 @@ export const AutoTradingScreen: React.FC<AutoTradingScreenProps> = ({ onBack }) 
   const [backendConnected, setBackendConnected] = useState(false);
   const [mt5Connected, setMt5Connected] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const [scalpingStatus, setScalpingStatus] = useState<backendApi.ScalpingStatus | null>(null);
+  const [togglingScalping, setTogglingScalping] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -46,12 +48,13 @@ export const AutoTradingScreen: React.FC<AutoTradingScreenProps> = ({ onBack }) 
       setMt5Connected(mt5Status.isConnected);
 
       // Fetch all data in parallel
-      const [status, mmStatus, stats, signals, trades] = await Promise.all([
+      const [status, mmStatus, stats, signals, trades, scalpStatus] = await Promise.all([
         backendApi.getTradingStatus(),
         backendApi.getMoneyManagementStatus(),
         backendApi.getTradeStats(),
         backendApi.getRecentSignals(10),
         backendApi.getOpenTrades(),
+        backendApi.getScalpingStatus().catch(() => null),
       ]);
 
       setTradingStatus(status);
@@ -59,6 +62,7 @@ export const AutoTradingScreen: React.FC<AutoTradingScreenProps> = ({ onBack }) 
       setTradeStats(stats);
       setRecentSignals(signals);
       setOpenTrades(trades);
+      setScalpingStatus(scalpStatus);
     } catch (error: any) {
       console.error('Error fetching data:', error);
       Alert.alert('Error', error.message || 'Failed to fetch data');
@@ -93,6 +97,23 @@ export const AutoTradingScreen: React.FC<AutoTradingScreenProps> = ({ onBack }) 
       Alert.alert('Error', error.message || 'Failed to toggle auto trading');
     } finally {
       setToggling(false);
+    }
+  };
+
+  const handleToggleScalpingMode = async () => {
+    if (togglingScalping) return;
+    
+    setTogglingScalping(true);
+    try {
+      const result = await backendApi.toggleScalpingMode();
+      setScalpingStatus(prev => prev ? { ...prev, enabled: !prev.enabled } : null);
+      Alert.alert('Success', result.message);
+      // Refresh to get updated config
+      fetchData();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to toggle scalping mode');
+    } finally {
+      setTogglingScalping(false);
     }
   };
 
@@ -243,6 +264,55 @@ export const AutoTradingScreen: React.FC<AutoTradingScreenProps> = ({ onBack }) 
               <Text style={styles.nextRunText}>
                 Next run: {tradingStatus?.nextRun ? formatTime(tradingStatus.nextRun) : 'N/A'}
               </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Scalping Mode Toggle Card */}
+        <View style={[styles.card, scalpingStatus?.enabled && styles.scalpingActiveCard]}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="rocket" size={24} color={scalpingStatus?.enabled ? '#FF5722' : '#FFD700'} />
+            <Text style={styles.cardTitle}>
+              {scalpingStatus?.enabled ? '⚡ Aggressive Scalping' : 'Trading Mode'}
+            </Text>
+          </View>
+          <View style={styles.toggleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.toggleLabel}>
+                {scalpingStatus?.enabled ? 'SCALPING MODE' : 'Standard ICT'}
+              </Text>
+              <Text style={styles.toggleSubtext}>
+                {scalpingStatus?.enabled 
+                  ? 'M5 timeframe • 5 min cycles • Aggressive entries'
+                  : 'M15 timeframe • 15 min cycles • Conservative'}
+              </Text>
+            </View>
+            <Switch
+              value={scalpingStatus?.enabled || false}
+              onValueChange={handleToggleScalpingMode}
+              trackColor={{ false: '#3D3D3D', true: '#FF5722' }}
+              thumbColor={scalpingStatus?.enabled ? '#FFD700' : '#888'}
+              disabled={togglingScalping}
+            />
+          </View>
+          {scalpingStatus?.enabled && scalpingStatus.config && (
+            <View style={styles.scalpingConfigRow}>
+              <View style={styles.scalpingConfigItem}>
+                <Text style={styles.scalpingConfigLabel}>SL</Text>
+                <Text style={styles.scalpingConfigValue}>{scalpingStatus.config.stopLossPips}p</Text>
+              </View>
+              <View style={styles.scalpingConfigItem}>
+                <Text style={styles.scalpingConfigLabel}>TP</Text>
+                <Text style={styles.scalpingConfigValue}>{scalpingStatus.config.takeProfitPips}p</Text>
+              </View>
+              <View style={styles.scalpingConfigItem}>
+                <Text style={styles.scalpingConfigLabel}>Min Conf</Text>
+                <Text style={styles.scalpingConfigValue}>{scalpingStatus.config.minConfidence}%</Text>
+              </View>
+              <View style={styles.scalpingConfigItem}>
+                <Text style={styles.scalpingConfigLabel}>R:R</Text>
+                <Text style={styles.scalpingConfigValue}>{scalpingStatus.config.minRiskReward}</Text>
+              </View>
             </View>
           )}
         </View>
@@ -746,6 +816,34 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 100,
+  },
+  // Scalping Mode Styles
+  scalpingActiveCard: {
+    borderWidth: 1,
+    borderColor: '#FF5722',
+    backgroundColor: 'rgba(255, 87, 34, 0.1)',
+  },
+  scalpingConfigRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#3D3D3D',
+  },
+  scalpingConfigItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  scalpingConfigLabel: {
+    fontSize: 10,
+    color: '#888',
+    marginBottom: 2,
+  },
+  scalpingConfigValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FF5722',
   },
 });
 

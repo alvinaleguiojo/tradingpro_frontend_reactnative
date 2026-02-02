@@ -76,6 +76,26 @@ export interface TradingStatus {
   nextRun: string;
 }
 
+export interface ScalpingConfig {
+  minConfidence: number;
+  minRiskReward: number;
+  maxSpreadPips: number;
+  stopLossPips: number;
+  takeProfitPips: number;
+  trailingStopPips: number;
+  usePartialTakeProfit: boolean;
+  partialProfitPercent: number;
+  breakEvenAtProfit: number;
+  onlyTradeDuringKillZones: boolean;
+  allowCounterTrend: boolean;
+}
+
+export interface ScalpingStatus {
+  enabled: boolean;
+  config: ScalpingConfig;
+  description: string;
+}
+
 export interface TradingSignal {
   id: string;
   symbol: string;
@@ -276,6 +296,53 @@ export const getTradeStats = async (): Promise<TradeStats> => {
  */
 export const syncTrades = async (): Promise<{ success: boolean; message: string }> => {
   return backendFetch('/trading/sync', { method: 'POST' });
+};
+
+// ================== SCALPING MODE ENDPOINTS ==================
+
+/**
+ * Get scalping mode status and configuration
+ */
+export const getScalpingStatus = async (): Promise<ScalpingStatus> => {
+  const result = await backendFetch<{ success: boolean; data: ScalpingStatus }>('/trading/scalping/status');
+  return result.data;
+};
+
+/**
+ * Enable aggressive scalping mode
+ */
+export const enableScalpingMode = async (): Promise<{ success: boolean; message: string; data: any }> => {
+  return backendFetch('/trading/scalping/enable', { method: 'POST' });
+};
+
+/**
+ * Disable scalping mode (use standard ICT strategy)
+ */
+export const disableScalpingMode = async (): Promise<{ success: boolean; message: string; data: any }> => {
+  return backendFetch('/trading/scalping/disable', { method: 'POST' });
+};
+
+/**
+ * Toggle scalping mode
+ */
+export const toggleScalpingMode = async (): Promise<{ success: boolean; message: string; data: any }> => {
+  // Get current status first
+  const status = await getScalpingStatus();
+  if (status.enabled) {
+    return disableScalpingMode();
+  } else {
+    return enableScalpingMode();
+  }
+};
+
+/**
+ * Update scalping configuration
+ */
+export const updateScalpingConfig = async (config: Partial<ScalpingConfig>): Promise<{ success: boolean; data: ScalpingConfig }> => {
+  return backendFetch('/trading/scalping/config', {
+    method: 'POST',
+    body: JSON.stringify(config),
+  });
 };
 
 // ================== MONEY MANAGEMENT ENDPOINTS ==================
