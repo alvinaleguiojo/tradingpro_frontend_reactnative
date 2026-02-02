@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Platform, Text } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, StyleSheet, Platform, Text, ActivityIndicator } from 'react-native';
+import { WebView } from 'react-native-webview';
 
 interface TradingChartProps {
   symbol?: string;
@@ -91,8 +92,8 @@ const TradingChartNative: React.FC<TradingChartProps> = ({
   theme = 'dark',
   height = 400,
 }) => {
-  // Dynamic import for WebView (only on native)
-  const WebView = require('react-native-webview').WebView;
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -142,21 +143,40 @@ const TradingChartNative: React.FC<TradingChartProps> = ({
     </html>
   `;
 
+  if (hasError) {
+    return (
+      <View style={[styles.container, styles.errorContainer, { height }]}>
+        <Text style={styles.errorText}>⚠️ Failed to load chart</Text>
+        <Text style={styles.errorSubtext}>Please check your internet connection</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { height }]}>
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#FFD700" />
+          <Text style={styles.loadingText}>Loading chart...</Text>
+        </View>
+      )}
       <WebView
         source={{ html: htmlContent }}
-        style={styles.webview}
+        style={[styles.webview, isLoading && { opacity: 0 }]}
         javaScriptEnabled={true}
         domStorageEnabled={true}
-        startInLoadingState={true}
+        startInLoadingState={false}
         scalesPageToFit={true}
         scrollEnabled={false}
-        renderLoading={() => (
-          <View style={styles.loading}>
-            <Text style={styles.loadingText}>Loading chart...</Text>
-          </View>
-        )}
+        onLoadEnd={() => setIsLoading(false)}
+        onError={() => {
+          setHasError(true);
+          setIsLoading(false);
+        }}
+        onHttpError={() => {
+          setHasError(true);
+          setIsLoading(false);
+        }}
       />
     </View>
   );
@@ -181,7 +201,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
   },
-  loading: {
+  loadingOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
@@ -190,10 +210,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#0D1421',
+    zIndex: 10,
   },
   loadingText: {
     color: '#8E9BAE',
     fontSize: 14,
+    marginTop: 12,
+  },
+  errorContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#FF6B6B',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  errorSubtext: {
+    color: '#8E9BAE',
+    fontSize: 14,
+    marginTop: 8,
   },
 });
 
