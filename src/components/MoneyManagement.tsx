@@ -192,9 +192,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 16,
   },
   modalContent: {
-    width: '95%',
+    width: '100%',
+    maxWidth: 500,
     maxHeight: '90%',
     backgroundColor: '#1A1A2E',
     borderRadius: 20,
