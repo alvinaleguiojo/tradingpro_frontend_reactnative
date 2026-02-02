@@ -1,12 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Platform, Text, ActivityIndicator } from 'react-native';
-import { WebView } from 'react-native-webview';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { View, StyleSheet, Platform, Text, TouchableOpacity, Linking } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 interface TradingChartProps {
   symbol?: string;
   interval?: string;
   theme?: 'dark' | 'light';
   height?: number;
+  onClose?: () => void;
 }
 
 // Web component using TradingView widget
@@ -85,99 +86,62 @@ const TradingChartWeb: React.FC<TradingChartProps> = ({
   );
 };
 
-// Native component using WebView with TradingView
+// Native component - Opens TradingView in browser
+// Note: WebView requires a native rebuild. This version works with OTA updates.
 const TradingChartNative: React.FC<TradingChartProps> = ({
-  symbol = 'OANDA:XAUUSD',
-  interval = '15',
+  symbol = 'XAUUSD',
   theme = 'dark',
   height = 400,
+  onClose,
 }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
+  const [isOpening, setIsOpening] = useState(false);
 
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { 
-            background-color: ${theme === 'dark' ? '#0D1421' : '#ffffff'}; 
-            overflow: hidden;
-          }
-          .tradingview-widget-container { 
-            height: 100vh; 
-            width: 100vw; 
-          }
-          .tradingview-widget-container__widget { 
-            height: 100%; 
-            width: 100%; 
-          }
-        </style>
-      </head>
-      <body>
-        <div class="tradingview-widget-container">
-          <div class="tradingview-widget-container__widget"></div>
-          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
-            ${JSON.stringify({
-              autosize: true,
-              symbol: symbol,
-              interval: interval,
-              timezone: 'Etc/UTC',
-              theme: theme,
-              style: '1',
-              locale: 'en',
-              enable_publishing: false,
-              allow_symbol_change: true,
-              calendar: false,
-              hide_top_toolbar: false,
-              hide_legend: false,
-              save_image: false,
-              hide_volume: false,
-              backgroundColor: theme === 'dark' ? 'rgba(13, 20, 33, 1)' : 'rgba(255, 255, 255, 1)',
-            })}
-          </script>
-        </div>
-      </body>
-    </html>
-  `;
+  // TradingView chart URL
+  const chartUrl = `https://www.tradingview.com/chart/?symbol=${symbol}`;
 
-  if (hasError) {
-    return (
-      <View style={[styles.container, styles.errorContainer, { height }]}>
-        <Text style={styles.errorText}>⚠️ Failed to load chart</Text>
-        <Text style={styles.errorSubtext}>Please check your internet connection</Text>
-      </View>
-    );
-  }
+  const openChart = useCallback(async () => {
+    setIsOpening(true);
+    try {
+      const supported = await Linking.canOpenURL(chartUrl);
+      if (supported) {
+        await Linking.openURL(chartUrl);
+      }
+    } catch (error) {
+      console.error('Error opening chart:', error);
+    } finally {
+      setIsOpening(false);
+      // Close the modal after opening external browser
+      onClose?.();
+    }
+  }, [chartUrl, onClose]);
+
+  // Auto-open the chart when component mounts
+  useEffect(() => {
+    openChart();
+  }, []);
 
   return (
     <View style={[styles.container, { height }]}>
-      {isLoading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#FFD700" />
-          <Text style={styles.loadingText}>Loading chart...</Text>
-        </View>
-      )}
-      <WebView
-        source={{ html: htmlContent }}
-        style={[styles.webview, isLoading && { opacity: 0 }]}
-        javaScriptEnabled={true}
-        domStorageEnabled={true}
-        startInLoadingState={false}
-        scalesPageToFit={true}
-        scrollEnabled={false}
-        onLoadEnd={() => setIsLoading(false)}
-        onError={() => {
-          setHasError(true);
-          setIsLoading(false);
-        }}
-        onHttpError={() => {
-          setHasError(true);
-          setIsLoading(false);
-        }}
-      />
+      <View style={styles.nativeContainer}>
+        <Ionicons name="trending-up" size={48} color="#FFD700" />
+        <Text style={styles.title}>TradingView Chart</Text>
+        <Text style={styles.subtitle}>Opening {symbol} chart in browser...</Text>
+        
+        <TouchableOpacity 
+          style={styles.openButton} 
+          onPress={openChart}
+          disabled={isOpening}
+        >
+          <Ionicons name="open-outline" size={20} color="#0D1421" />
+          <Text style={styles.openButtonText}>
+            {isOpening ? 'Opening...' : 'Open TradingView Chart'}
+          </Text>
+        </TouchableOpacity>
+
+        <Text style={styles.hint}>
+          Tip: Use TradingView app for best mobile experience
+        </Text>
+      </View>
     </View>
   );
 };
@@ -197,39 +161,44 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#0D1421',
   },
-  webview: {
+  nativeContainer: {
     flex: 1,
-    backgroundColor: 'transparent',
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0D1421',
-    zIndex: 10,
+    padding: 24,
   },
-  loadingText: {
+  title: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  subtitle: {
     color: '#8E9BAE',
     fontSize: 14,
-    marginTop: 12,
+    textAlign: 'center',
+    marginBottom: 24,
   },
-  errorContainer: {
-    justifyContent: 'center',
+  openButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
   },
-  errorText: {
-    color: '#FF6B6B',
+  openButtonText: {
+    color: '#0D1421',
     fontSize: 16,
     fontWeight: '600',
   },
-  errorSubtext: {
+  hint: {
     color: '#8E9BAE',
-    fontSize: 14,
-    marginTop: 8,
+    fontSize: 12,
+    marginTop: 24,
+    textAlign: 'center',
   },
 });
 
