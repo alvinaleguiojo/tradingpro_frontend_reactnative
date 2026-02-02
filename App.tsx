@@ -14,6 +14,7 @@ import {
   LoginScreen,
   SplashScreen,
   MoneyManagement,
+  AutoTradingScreen,
 } from './src/components';
 
 import { mockAccountData, mockTradeHistory } from './src/data/mockData';
@@ -158,20 +159,23 @@ export default function App(): React.JSX.Element {
         mt5Api.getAccountDetails()
       ]);
       
-      setAccount({
-        accountId: details.userName || `Account ${details.login}` || sessionId || 'MT5 Account',
-        name: details.userName,
-        accountType: details.type,
-        balance: summary.balance,
-        equity: summary.equity,
-        profit: summary.profit,
-        margin: summary.margin,
-        freeMargin: summary.freeMargin,
-        marginLevel: summary.marginLevel,
-        leverage: summary.leverage || details.leverage,
-        currency: summary.currency,
-        openPositions: 0, // Will be updated when we add positions endpoint
-      });
+      // Only update if we got valid data
+      if (summary && details) {
+        setAccount({
+          accountId: details.userName || `Account ${details.login}` || sessionId || 'MT5 Account',
+          name: details.userName || '',
+          accountType: details.type || '',
+          balance: summary.balance || 0,
+          equity: summary.equity || 0,
+          profit: summary.profit || 0,
+          margin: summary.margin || 0,
+          freeMargin: summary.freeMargin || 0,
+          marginLevel: summary.marginLevel || 0,
+          leverage: summary.leverage || details.leverage || 0,
+          currency: summary.currency || 'USD',
+          openPositions: 0, // Will be updated when we add positions endpoint
+        });
+      }
     } catch (error) {
       console.error('Failed to fetch account summary:', error);
     }
@@ -192,6 +196,12 @@ export default function App(): React.JSX.Element {
         }
       } catch (error) {
         console.error('Failed to restore session:', error);
+        // Clear any corrupted session data
+        try {
+          await mt5Api.clearSavedSession();
+        } catch (clearError) {
+          console.error('Failed to clear session:', clearError);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -424,33 +434,37 @@ export default function App(): React.JSX.Element {
         <SafeAreaView style={styles.safeArea}>
           <Header onLogout={handleLogout} />
           
-          <ScrollView 
-            style={styles.scrollView}
-            showsVerticalScrollIndicator={false}
-          >
-            <AccountCard 
-              account={account} 
-              dailyProfit={dailyRealizedProfit}
-              onMoneyManagementPress={() => setMoneyManagementVisible(true)}
-            />
-            <PriceDisplay priceData={priceData} />
-            <TradingButtons 
-              onBuy={() => handleTrade('BUY')} 
-              onSell={() => handleTrade('SELL')}
-              bidPrice={priceData.bid}
-              askPrice={priceData.ask}
-              disabled={isDailyTargetReached(account.equity, dailyRealizedProfit) || hasOpenOrders()}
-              dailyProfit={dailyRealizedProfit}
-              dailyTarget={getCurrentLevel(account.equity).dailyTarget}
-              hasOpenOrder={hasOpenOrders()}
-              recommendedLotSize={getRecommendedLotSize()}
-            />
-            <TradeHistory 
-              trades={tradeHistory} 
-              currentPrice={priceData.bid} 
-              onCloseTrade={handleCloseTrade}
-            />
-          </ScrollView>
+          {activeTab === 'auto' ? (
+            <AutoTradingScreen onBack={() => setActiveTab('trade')} />
+          ) : (
+            <ScrollView 
+              style={styles.scrollView}
+              showsVerticalScrollIndicator={false}
+            >
+              <AccountCard 
+                account={account} 
+                dailyProfit={dailyRealizedProfit}
+                onMoneyManagementPress={() => setMoneyManagementVisible(true)}
+              />
+              <PriceDisplay priceData={priceData} />
+              <TradingButtons 
+                onBuy={() => handleTrade('BUY')} 
+                onSell={() => handleTrade('SELL')}
+                bidPrice={priceData.bid}
+                askPrice={priceData.ask}
+                disabled={isDailyTargetReached(account.equity, dailyRealizedProfit) || hasOpenOrders()}
+                dailyProfit={dailyRealizedProfit}
+                dailyTarget={getCurrentLevel(account.equity).dailyTarget}
+                hasOpenOrder={hasOpenOrders()}
+                recommendedLotSize={getRecommendedLotSize()}
+              />
+              <TradeHistory 
+                trades={tradeHistory} 
+                currentPrice={priceData.bid} 
+                onCloseTrade={handleCloseTrade}
+              />
+            </ScrollView>
+          )}
 
           <BottomNav activeTab={activeTab} onTabPress={setActiveTab} />
 

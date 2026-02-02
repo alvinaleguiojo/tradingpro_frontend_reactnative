@@ -9,12 +9,24 @@ interface PriceDisplayProps {
 
 const PriceDisplay: React.FC<PriceDisplayProps> = ({ priceData }) => {
   const flashAnim = useRef(new Animated.Value(0)).current;
-  const prevPriceRef = useRef(priceData.bid);
   
-  const isUp = priceData.change >= 0;
+  // Safe number helper
+  const safeNumber = (val: any): number => (typeof val === 'number' && !isNaN(val) ? val : 0);
+  
+  const safeBid = safeNumber(priceData?.bid);
+  const safeChange = safeNumber(priceData?.change);
+  const safeChangePercent = safeNumber(priceData?.changePercent);
+  const safeAsk = safeNumber(priceData?.ask);
+  const safeHigh = safeNumber(priceData?.high);
+  const safeLow = safeNumber(priceData?.low);
+  const safeSpread = safeNumber(priceData?.spread);
+  
+  const prevPriceRef = useRef(safeBid);
+  
+  const isUp = safeChange >= 0;
   
   useEffect(() => {
-    if (prevPriceRef.current !== priceData.bid) {
+    if (prevPriceRef.current !== safeBid) {
       Animated.sequence([
         Animated.timing(flashAnim, {
           toValue: 1,
@@ -27,9 +39,9 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ priceData }) => {
           useNativeDriver: false,
         }),
       ]).start();
-      prevPriceRef.current = priceData.bid;
+      prevPriceRef.current = safeBid;
     }
-  }, [priceData.bid, flashAnim]);
+  }, [safeBid, flashAnim]);
 
   const backgroundColor = flashAnim.interpolate({
     inputRange: [0, 1],
@@ -57,7 +69,7 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ priceData }) => {
             color={isUp ? '#00D4AA' : '#EF4444'} 
           />
           <Text style={[styles.changeText, { color: isUp ? '#00D4AA' : '#EF4444' }]}>
-            {isUp ? '+' : ''}{priceData.changePercent.toFixed(2)}%
+            {isUp ? '+' : ''}{safeChangePercent.toFixed(2)}%
           </Text>
         </View>
       </View>
@@ -67,7 +79,7 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ priceData }) => {
         <Text style={styles.priceLabel}>Current Price</Text>
         <View style={styles.priceRow}>
           <Text style={styles.priceDollar}>$</Text>
-          <Text style={styles.priceValue}>{priceData.bid.toFixed(2)}</Text>
+          <Text style={styles.priceValue}>{safeBid.toFixed(2)}</Text>
           <Ionicons 
             name={isUp ? 'caret-up' : 'caret-down'} 
             size={20} 
@@ -76,7 +88,7 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ priceData }) => {
           />
         </View>
         <Text style={[styles.priceChange, { color: isUp ? '#00D4AA' : '#EF4444' }]}>
-          {isUp ? '+' : ''}{priceData.change.toFixed(2)} USD
+          {isUp ? '+' : ''}{safeChange.toFixed(2)} USD
         </Text>
       </View>
 
@@ -84,17 +96,17 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ priceData }) => {
       <View style={styles.spreadContainer}>
         <View style={styles.bidAskItem}>
           <Text style={styles.bidAskLabel}>BID</Text>
-          <Text style={styles.bidPrice}>{priceData.bid.toFixed(2)}</Text>
+          <Text style={styles.bidPrice}>{safeBid.toFixed(2)}</Text>
         </View>
         
         <View style={styles.spreadIndicator}>
           <Text style={styles.spreadLabel}>SPREAD</Text>
-          <Text style={styles.spreadValue}>{(priceData.spread * 100).toFixed(0)}</Text>
+          <Text style={styles.spreadValue}>{(safeSpread * 100).toFixed(0)}</Text>
         </View>
         
         <View style={styles.bidAskItem}>
           <Text style={styles.bidAskLabel}>ASK</Text>
-          <Text style={styles.askPrice}>{priceData.ask.toFixed(2)}</Text>
+          <Text style={styles.askPrice}>{safeAsk.toFixed(2)}</Text>
         </View>
       </View>
 
@@ -103,7 +115,7 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ priceData }) => {
         <View style={styles.highLowItem}>
           <Ionicons name="arrow-up-circle" size={16} color="#00D4AA" />
           <Text style={styles.highLowLabel}>High</Text>
-          <Text style={styles.highLowValue}>${priceData.high.toFixed(2)}</Text>
+          <Text style={styles.highLowValue}>${safeHigh.toFixed(2)}</Text>
         </View>
         
         <View style={styles.highLowDivider} />
@@ -111,7 +123,7 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ priceData }) => {
         <View style={styles.highLowItem}>
           <Ionicons name="arrow-down-circle" size={16} color="#EF4444" />
           <Text style={styles.highLowLabel}>Low</Text>
-          <Text style={styles.highLowValue}>${priceData.low.toFixed(2)}</Text>
+          <Text style={styles.highLowValue}>${safeLow.toFixed(2)}</Text>
         </View>
       </View>
     </Animated.View>

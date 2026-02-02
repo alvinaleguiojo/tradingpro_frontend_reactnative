@@ -12,7 +12,13 @@ interface TradeHistoryProps {
 const TradeHistory: React.FC<TradeHistoryProps> = ({ trades, currentPrice, onCloseTrade }) => {
   const [filter, setFilter] = useState<TradeFilter>('all');
   
-  const filteredTrades = trades.filter(trade => {
+  // Safe number helper
+  const safeNumber = (val: any): number => (typeof val === 'number' && !isNaN(val) ? val : 0);
+  
+  // Ensure trades is an array
+  const safeTrades = Array.isArray(trades) ? trades : [];
+  
+  const filteredTrades = safeTrades.filter(trade => {
     if (filter === 'all') return true;
     if (filter === 'open') return trade.status === 'OPEN';
     if (filter === 'closed') return trade.status === 'CLOSED';
@@ -21,7 +27,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades, currentPrice, onClo
 
   const calculateProfit = (trade: Trade): number => {
     // Use profit directly from the API - it's already calculated by MT5
-    return trade.profit;
+    return safeNumber(trade?.profit);
   };
 
   const formatDate = (dateString: string): string => {
@@ -34,8 +40,8 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades, currentPrice, onClo
     });
   };
 
-  const totalProfit = trades.reduce((sum, t) => sum + calculateProfit(t), 0);
-  const openTradesCount = trades.filter(t => t.status === 'OPEN').length;
+  const totalProfit = safeTrades.reduce((sum, t) => sum + calculateProfit(t), 0);
+  const openTradesCount = safeTrades.filter(t => t.status === 'OPEN').length;
 
   const filters: TradeFilter[] = ['all', 'open', 'closed'];
 
@@ -63,7 +69,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades, currentPrice, onClo
       <View style={styles.summaryContainer}>
         <View style={styles.summaryItem}>
           <Text style={styles.summaryLabel}>Total Trades</Text>
-          <Text style={styles.summaryValue}>{trades.length}</Text>
+          <Text style={styles.summaryValue}>{safeTrades.length}</Text>
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
@@ -113,7 +119,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades, currentPrice, onClo
                     </View>
                   </View>
                   <Text style={styles.tradeLot}>
-                    {trade.lotSize.toFixed(2)} Lot @ {trade.openPrice.toFixed(2)}
+                    {safeNumber(trade.lotSize).toFixed(2)} Lot @ {safeNumber(trade.openPrice).toFixed(2)}
                   </Text>
                   <Text style={styles.tradeTime}>{formatDate(trade.openTime)}</Text>
                 </View>

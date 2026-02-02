@@ -1,16 +1,16 @@
 import { Account, Trade, PriceData } from '../types';
 
-// Mock Account Data
+// Initial Account Data (empty placeholder until real data loads)
 export const mockAccountData: Account = {
-  accountId: 'TRD-2847593',
-  name: 'John Trader',
-  balance: 25000.00,
-  equity: 25432.50,
-  margin: 1250.00,
-  freeMargin: 24182.50,
-  marginLevel: 2034.60,
-  profit: 432.50,
-  openPositions: 3,
+  accountId: '',
+  name: '',
+  balance: 0,
+  equity: 0,
+  margin: 0,
+  freeMargin: 0,
+  marginLevel: 0,
+  profit: 0,
+  openPositions: 0,
   currency: 'USD',
 };
 

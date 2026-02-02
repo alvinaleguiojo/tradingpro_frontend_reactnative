@@ -49,7 +49,7 @@ export interface Trade {
 }
 
 // Navigation Types
-export type TabType = 'trade' | 'history' | 'account' | 'settings';
+export type TabType = 'trade' | 'history' | 'account' | 'settings' | 'auto';
 
 // Filter Types
 export type TradeFilter = 'all' | 'open' | 'closed';

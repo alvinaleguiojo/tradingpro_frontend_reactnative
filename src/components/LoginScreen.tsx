@@ -16,6 +16,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { BROKER_SERVERS, BrokerServer, mt5Api, searchBrokers, parseBrokerServers } from '../services/api';
+import { setMt5Credentials } from '../services/backendApi';
 
 interface LoginScreenProps {
   onLoginSuccess: (sessionId: string) => void;
@@ -125,6 +126,20 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         host: selectedServer.host,
         port: selectedServer.port,
       });
+
+      // Sync credentials with backend for auto trading
+      try {
+        await setMt5Credentials(
+          accountNumber,
+          password,
+          selectedServer.host,
+          selectedServer.port
+        );
+        console.log('Backend MT5 credentials synced successfully');
+      } catch (backendError) {
+        console.warn('Failed to sync credentials with backend (auto trading may not work):', backendError);
+        // Don't fail login if backend sync fails
+      }
 
       onLoginSuccess(sessionId);
     } catch (error) {

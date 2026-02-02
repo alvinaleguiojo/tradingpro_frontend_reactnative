@@ -12,8 +12,13 @@ interface AccountCardProps {
 }
 
 const AccountCard: React.FC<AccountCardProps> = ({ account, dailyProfit, onMoneyManagementPress }) => {
-  const isProfit = dailyProfit >= 0;
-  const currentLevel = getCurrentLevel(account.equity);
+  // Safe number formatting helpers
+  const safeNumber = (val: any): number => (typeof val === 'number' && !isNaN(val) ? val : 0);
+  const formatMoney = (val: any): string => safeNumber(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  
+  const safeDailyProfit = safeNumber(dailyProfit);
+  const isProfit = safeDailyProfit >= 0;
+  const currentLevel = getCurrentLevel(safeNumber(account?.equity));
   
   // Determine account type display
   const getAccountTypeDisplay = () => {
@@ -53,7 +58,7 @@ const AccountCard: React.FC<AccountCardProps> = ({ account, dailyProfit, onMoney
       <View style={styles.balanceSection}>
         <Text style={styles.balanceLabel}>Total Equity</Text>
         <Text style={styles.balanceAmount}>
-          ${account.equity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          ${formatMoney(account?.equity)}
         </Text>
         <View style={styles.profitContainer}>
           <Ionicons 
@@ -62,7 +67,7 @@ const AccountCard: React.FC<AccountCardProps> = ({ account, dailyProfit, onMoney
             color={isProfit ? '#00D4AA' : '#EF4444'} 
           />
           <Text style={[styles.profitText, { color: isProfit ? '#00D4AA' : '#EF4444' }]}>
-            {isProfit ? '+' : ''}${dailyProfit.toFixed(2)} today
+            {isProfit ? '+' : ''}${safeDailyProfit.toFixed(2)} today
           </Text>
         </View>
       </View>
@@ -72,7 +77,7 @@ const AccountCard: React.FC<AccountCardProps> = ({ account, dailyProfit, onMoney
         <View style={styles.statItem}>
           <Text style={styles.statLabel}>Balance</Text>
           <Text style={styles.statValue}>
-            ${account.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            ${formatMoney(account?.balance)}
           </Text>
         </View>
         
@@ -81,7 +86,7 @@ const AccountCard: React.FC<AccountCardProps> = ({ account, dailyProfit, onMoney
         <View style={styles.statItem}>
           <Text style={styles.statLabel}>Free Margin</Text>
           <Text style={styles.statValue}>
-            ${account.freeMargin.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            ${formatMoney(account?.freeMargin)}
           </Text>
         </View>
         
@@ -89,7 +94,7 @@ const AccountCard: React.FC<AccountCardProps> = ({ account, dailyProfit, onMoney
         
         <View style={styles.statItem}>
           <Text style={styles.statLabel}>Open Trades</Text>
-          <Text style={styles.statValue}>{account.openPositions}</Text>
+          <Text style={styles.statValue}>{safeNumber(account?.openPositions)}</Text>
         </View>
       </View>
 
@@ -97,7 +102,7 @@ const AccountCard: React.FC<AccountCardProps> = ({ account, dailyProfit, onMoney
       <View style={styles.marginLevelContainer}>
         <View style={styles.marginLevelHeader}>
           <Text style={styles.marginLevelLabel}>Margin Level</Text>
-          <Text style={styles.marginLevelValue}>{account.marginLevel.toFixed(2)}%</Text>
+          <Text style={styles.marginLevelValue}>{safeNumber(account?.marginLevel).toFixed(2)}%</Text>
         </View>
         <View style={styles.marginLevelBar}>
           <LinearGradient
