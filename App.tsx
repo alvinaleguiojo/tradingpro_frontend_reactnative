@@ -435,8 +435,14 @@ export default function App(): React.JSX.Element {
   }
 
   // Desktop layout with chart sidebar
-  const renderDesktopLayout = () => (
-    <View style={styles.desktopContainer}>
+  const renderDesktopLayout = () => {
+    // If Auto Trading is active, show it fullscreen on desktop too
+    if (activeTab === 'auto') {
+      return <AutoTradingScreen onBack={() => setActiveTab('trade')} />;
+    }
+    
+    return (
+      <View style={styles.desktopContainer}>
       {/* Left Panel - Trading Controls */}
       <View style={styles.desktopLeftPanel}>
         <ScrollView 
@@ -463,6 +469,21 @@ export default function App(): React.JSX.Element {
             hasOpenOrder={hasOpenOrders()}
             recommendedLotSize={getRecommendedLotSize()}
           />
+          
+          {/* Auto Trading Button for Desktop */}
+          <TouchableOpacity 
+            style={styles.desktopAutoTradingButton}
+            onPress={() => setActiveTab('auto')}
+          >
+            <View style={styles.desktopAutoTradingContent}>
+              <Text style={styles.desktopAutoTradingIcon}>🤖</Text>
+              <View>
+                <Text style={styles.desktopAutoTradingTitle}>Auto Trading</Text>
+                <Text style={styles.desktopAutoTradingSubtitle}>AI-Powered Trading Bot</Text>
+              </View>
+            </View>
+            <Text style={styles.desktopAutoTradingArrow}>→</Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
 
@@ -490,7 +511,8 @@ export default function App(): React.JSX.Element {
         </ScrollView>
       </View>
     </View>
-  );
+    );
+  };
 
   // Mobile layout
   const renderMobileLayout = () => (
@@ -660,6 +682,40 @@ const styles = StyleSheet.create({
     width: 380,
     minWidth: 320,
     flexShrink: 0,
+  },
+  desktopAutoTradingButton: {
+    marginTop: 16,
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#3B4A5E',
+  },
+  desktopAutoTradingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  desktopAutoTradingIcon: {
+    fontSize: 28,
+  },
+  desktopAutoTradingTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  desktopAutoTradingSubtitle: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  desktopAutoTradingArrow: {
+    color: '#00D4AA',
+    fontSize: 20,
+    fontWeight: '600',
   },
   chartModalContainer: {
     flex: 1,
