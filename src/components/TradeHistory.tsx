@@ -37,78 +37,112 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
 
   const fetchAllData = useCallback(async () => {
     try {
-      // Fetch open trades
-      const openTrades = await getOpenTrades();
-      
-      // Fetch closed trades history
-      const closedTrades = await getTradeHistory(90); // Last 90 days
-      
-      // Fetch deals (deposits/withdrawals)
-      const deals = await getDealsHistory(90);
-      
       const items: HistoryItem[] = [];
-      
-      // Process open trades
-      if (Array.isArray(openTrades)) {
-        openTrades.forEach((trade: any) => {
+      let deposits = 0;
+
+      // First, use props trades if available (these come from MT5 sync)
+      if (propTrades && Array.isArray(propTrades) && propTrades.length > 0) {
+        propTrades.forEach((trade: any) => {
+          const isBuy = trade.type?.includes('Buy') || trade.type === 'BUY' || trade.type === 0;
           items.push({
-            id: trade.ticket || trade.id || `open-${Math.random()}`,
+            id: trade.ticket || trade.id || `trade-${Math.random()}`,
             type: 'trade',
-            tradeType: trade.type?.includes('Buy') || trade.type === 'BUY' || trade.type === 0 ? 'BUY' : 'SELL',
+            tradeType: isBuy ? 'BUY' : 'SELL',
             symbol: trade.symbol,
             volume: safeNumber(trade.volume || trade.lotSize),
             openPrice: safeNumber(trade.openPrice),
-            profit: safeNumber(trade.profit),
-            status: 'OPEN',
-            time: trade.openTime || new Date().toISOString(),
-            comment: trade.comment,
-          });
-        });
-      }
-      
-      // Process closed trades
-      if (Array.isArray(closedTrades)) {
-        closedTrades.forEach((trade: any) => {
-          items.push({
-            id: trade.ticket || trade.order || `closed-${Math.random()}`,
-            type: 'trade',
-            tradeType: trade.type?.includes('Buy') || trade.type === 'BUY' || trade.type === 0 ? 'BUY' : 'SELL',
-            symbol: trade.symbol,
-            volume: safeNumber(trade.volume),
-            openPrice: safeNumber(trade.openPrice || trade.price),
             closePrice: safeNumber(trade.closePrice),
             profit: safeNumber(trade.profit),
-            status: 'CLOSED',
-            time: trade.closeTime || trade.time || new Date().toISOString(),
+            status: trade.status === 'OPEN' ? 'OPEN' : 'CLOSED',
+            time: trade.openTime || trade.closeTime || new Date().toISOString(),
             comment: trade.comment,
           });
         });
       }
-      
-      // Process deals (deposits, withdrawals, balance operations)
-      let deposits = 0;
-      if (Array.isArray(deals)) {
-        deals.forEach((deal: any) => {
-          // Check if it's a balance operation (deposit/withdrawal)
-          const dealType = deal.type?.toString().toLowerCase() || '';
-          const entry = deal.entry?.toString().toLowerCase() || '';
-          const isBalanceOp = dealType.includes('balance') || entry === 'balance' || deal.symbol === '' || !deal.symbol;
-          
-          if (isBalanceOp && deal.profit !== 0) {
-            const isDeposit = safeNumber(deal.profit) > 0;
-            if (isDeposit) {
-              deposits += safeNumber(deal.profit);
+
+      // Try to fetch additional data from backend (open trades from MT5)
+      try {
+        const openTrades = await getOpenTrades();
+        if (Array.isArray(openTrades)) {
+          openTrades.forEach((trade: any) => {
+            // Avoid duplicates
+            const existingIds = items.map(i => i.id);
+            const tradeId = trade.ticket || trade.id;
+            if (tradeId && !existingIds.includes(tradeId)) {
+              items.push({
+                id: tradeId,
+                type: 'trade',
+                tradeType: trade.type?.includes('Buy') || trade.type === 'BUY' || trade.type === 0 ? 'BUY' : 'SELL',
+                symbol: trade.symbol,
+                volume: safeNumber(trade.volume || trade.lotSize),
+                openPrice: safeNumber(trade.openPrice),
+                profit: safeNumber(trade.profit),
+                status: 'OPEN',
+                time: trade.openTime || new Date().toISOString(),
+                comment: trade.comment,
+              });
             }
-            items.push({
-              id: deal.ticket || deal.deal || `deal-${Math.random()}`,
-              type: isDeposit ? 'deposit' : 'withdrawal',
-              profit: safeNumber(deal.profit),
-              status: 'CLOSED',
-              time: deal.time || new Date().toISOString(),
-              comment: deal.comment || (isDeposit ? 'Deposit' : 'Withdrawal'),
-            });
-          }
-        });
+          });
+        }
+      } catch (e) {
+        console.log('Could not fetch open trades from backend');
+      }
+      
+      // Try to fetch closed trades history
+      try {
+        const closedTrades = await getTradeHistory(90);
+        if (Array.isArray(closedTrades)) {
+          closedTrades.forEach((trade: any) => {
+            const existingIds = items.map(i => i.id);
+            const tradeId = trade.ticket || trade.order;
+            if (tradeId && !existingIds.includes(tradeId)) {
+              items.push({
+                id: tradeId,
+                type: 'trade',
+                tradeType: trade.type?.includes('Buy') || trade.type === 'BUY' || trade.type === 0 ? 'BUY' : 'SELL',
+                symbol: trade.symbol,
+                volume: safeNumber(trade.volume),
+                openPrice: safeNumber(trade.openPrice || trade.price),
+                closePrice: safeNumber(trade.closePrice),
+                profit: safeNumber(trade.profit),
+                status: 'CLOSED',
+                time: trade.closeTime || trade.time || new Date().toISOString(),
+                comment: trade.comment,
+              });
+            }
+          });
+        }
+      } catch (e) {
+        console.log('Could not fetch trade history from backend');
+      }
+      
+      // Try to fetch deals (deposits/withdrawals)
+      try {
+        const deals = await getDealsHistory(90);
+        if (Array.isArray(deals)) {
+          deals.forEach((deal: any) => {
+            const dealType = deal.type?.toString().toLowerCase() || '';
+            const entry = deal.entry?.toString().toLowerCase() || '';
+            const isBalanceOp = dealType.includes('balance') || entry === 'balance' || deal.symbol === '' || !deal.symbol;
+            
+            if (isBalanceOp && deal.profit !== 0) {
+              const isDeposit = safeNumber(deal.profit) > 0;
+              if (isDeposit) {
+                deposits += safeNumber(deal.profit);
+              }
+              items.push({
+                id: deal.ticket || deal.deal || `deal-${Math.random()}`,
+                type: isDeposit ? 'deposit' : 'withdrawal',
+                profit: safeNumber(deal.profit),
+                status: 'CLOSED',
+                time: deal.time || new Date().toISOString(),
+                comment: deal.comment || (isDeposit ? 'Deposit' : 'Withdrawal'),
+              });
+            }
+          });
+        }
+      } catch (e) {
+        console.log('Could not fetch deals from backend');
       }
       
       setTotalDeposits(deposits);
@@ -123,11 +157,11 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [propTrades]);
 
   useEffect(() => {
     fetchAllData();
-  }, [fetchAllData]);
+  }, [fetchAllData, propTrades]);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
