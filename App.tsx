@@ -6,7 +6,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   Header,
   AccountCard,
-  PriceDisplay,
   TradingButtons,
   TradeHistory,
   TradeModal,
@@ -457,7 +456,6 @@ export default function App(): React.JSX.Element {
                 theme="dark" 
                 height={350}
               />
-              <PriceDisplay priceData={priceData} />
               <TradingButtons 
                 onBuy={() => handleTrade('BUY')} 
                 onSell={() => handleTrade('SELL')}
