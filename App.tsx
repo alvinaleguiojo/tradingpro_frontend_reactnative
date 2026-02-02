@@ -516,7 +516,6 @@ export default function App(): React.JSX.Element {
                 interval="15" 
                 theme="dark" 
                 height={Dimensions.get('window').height - 100}
-                onClose={() => setChartVisible(false)}
               />
             </View>
           </Modal>
