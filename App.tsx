@@ -442,6 +442,17 @@ export default function App(): React.JSX.Element {
           
           {activeTab === 'auto' ? (
             <AutoTradingScreen onBack={() => setActiveTab('trade')} />
+          ) : activeTab === 'history' ? (
+            <ScrollView 
+              style={styles.scrollView}
+              showsVerticalScrollIndicator={false}
+            >
+              <TradeHistory 
+                trades={tradeHistory} 
+                currentPrice={priceData.bid} 
+                onCloseTrade={handleCloseTrade}
+              />
+            </ScrollView>
           ) : (
             <ScrollView 
               style={styles.scrollView}
@@ -466,11 +477,6 @@ export default function App(): React.JSX.Element {
                 dailyTarget={getCurrentLevel(account.equity).dailyTarget}
                 hasOpenOrder={hasOpenOrders()}
                 recommendedLotSize={getRecommendedLotSize()}
-              />
-              <TradeHistory 
-                trades={tradeHistory} 
-                currentPrice={priceData.bid} 
-                onCloseTrade={handleCloseTrade}
               />
             </ScrollView>
           )}
