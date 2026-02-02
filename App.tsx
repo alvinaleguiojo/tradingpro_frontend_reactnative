@@ -39,6 +39,18 @@ const defaultPriceData: PriceData = {
   timestamp: new Date().toISOString(),
 };
 
+// Cross-platform alert function that works on both mobile and web
+const showAlert = (title: string, message: string, onOk?: () => void): void => {
+  if (Platform.OS === 'web') {
+    // Use browser's native alert for web
+    window.alert(`${title}\n\n${message}`);
+    if (onOk) onOk();
+  } else {
+    // Use React Native Alert for mobile
+    Alert.alert(title, message, [{ text: 'OK', onPress: onOk }]);
+  }
+};
+
 export default function App(): React.JSX.Element {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
@@ -299,20 +311,18 @@ export default function App(): React.JSX.Element {
   const handleTrade = (type: TradeType): void => {
     // Check if daily target is reached
     if (isDailyTargetReached(account.equity, dailyRealizedProfit)) {
-      Alert.alert(
+      showAlert(
         '🎉 Daily Target Reached!',
-        `Congratulations! You've hit your daily target of $${getCurrentLevel(account.equity).dailyTarget.toFixed(2)}.\n\nTrading is paused to protect your profits. Come back tomorrow!`,
-        [{ text: 'OK', style: 'default' }]
+        `Congratulations! You've hit your daily target of $${getCurrentLevel(account.equity).dailyTarget.toFixed(2)}.\n\nTrading is paused to protect your profits. Come back tomorrow!`
       );
       return;
     }
     
     // Check if there's already an open order
     if (hasOpenOrders()) {
-      Alert.alert(
+      showAlert(
         '⚠️ Order Already Open',
-        'You already have an open position. Please close it before opening a new trade.\n\nThis helps manage risk according to your money management plan.',
-        [{ text: 'OK', style: 'default' }]
+        'You already have an open position. Please close it before opening a new trade.\n\nThis helps manage risk according to your money management plan.'
       );
       return;
     }
@@ -324,14 +334,14 @@ export default function App(): React.JSX.Element {
   const executeTrade = async (): Promise<void> => {
     // Double-check target before executing
     if (isDailyTargetReached(account.equity, dailyRealizedProfit)) {
-      Alert.alert('Trading Paused', 'Daily target has been reached.');
+      showAlert('Trading Paused', 'Daily target has been reached.');
       setModalVisible(false);
       return;
     }
     
     // Double-check no open orders
     if (hasOpenOrders()) {
-      Alert.alert('Order Exists', 'Close your current position first.');
+      showAlert('Order Exists', 'Close your current position first.');
       setModalVisible(false);
       return;
     }
@@ -355,10 +365,9 @@ export default function App(): React.JSX.Element {
       console.log('Order executed:', order);
       
       const executedPrice = order.openPrice || price;
-      Alert.alert(
+      showAlert(
         'Order Executed',
-        `${operation} ${lotSize} lot(s) of ${priceData.symbol} at ${executedPrice.toFixed(2)}\nTicket: ${order.ticket}`,
-        [{ text: 'OK' }]
+        `${operation} ${lotSize} lot(s) of ${priceData.symbol} at ${executedPrice.toFixed(2)}\nTicket: ${order.ticket}`
       );
       
       setModalVisible(false);
@@ -367,10 +376,9 @@ export default function App(): React.JSX.Element {
       fetchAllOrders();
     } catch (error) {
       console.error('Failed to execute trade:', error);
-      Alert.alert(
+      showAlert(
         'Order Failed',
-        error instanceof Error ? error.message : 'Failed to execute trade. Please try again.',
-        [{ text: 'OK' }]
+        error instanceof Error ? error.message : 'Failed to execute trade. Please try again.'
       );
       setModalVisible(false);
     }
@@ -387,20 +395,18 @@ export default function App(): React.JSX.Element {
       
       console.log('Order closed:', result);
       
-      Alert.alert(
+      showAlert(
         'Trade Closed',
-        `${trade.type} ${trade.lotSize} lot(s) of ${trade.symbol} closed\\nProfit: ${result.profit >= 0 ? '+' : ''}$${result.profit.toFixed(2)}`,
-        [{ text: 'OK' }]
+        `${trade.type} ${trade.lotSize} lot(s) of ${trade.symbol} closed\nProfit: ${result.profit >= 0 ? '+' : ''}$${result.profit.toFixed(2)}`
       );
       
       // Refresh orders
       fetchAllOrders();
     } catch (error) {
       console.error('Failed to close trade:', error);
-      Alert.alert(
+      showAlert(
         'Close Failed',
-        error instanceof Error ? error.message : 'Failed to close trade. Please try again.',
-        [{ text: 'OK' }]
+        error instanceof Error ? error.message : 'Failed to close trade. Please try again.'
       );
     }
   };
@@ -577,23 +583,6 @@ export default function App(): React.JSX.Element {
           {/* Only show these modals on mobile, desktop has inline */}
           {!isDesktop && (
             <>
-              <TradeModal 
-                visible={isModalVisible}
-                tradeType={tradeType}
-                price={tradeType === 'BUY' ? priceData.ask : priceData.bid}
-                lotSize={getRecommendedLotSize()}
-                currentLevel={getCurrentLevel(account.equity).level}
-                dailyTarget={getCurrentLevel(account.equity).dailyTarget}
-                onClose={() => setModalVisible(false)}
-                onExecute={executeTrade}
-              />
-
-              <MoneyManagement
-                balance={account.equity}
-                visible={isMoneyManagementVisible}
-                onClose={() => setMoneyManagementVisible(false)}
-              />
-
               {/* Full Screen Chart Modal */}
               <Modal
                 visible={isChartVisible}
@@ -621,6 +610,24 @@ export default function App(): React.JSX.Element {
               </Modal>
             </>
           )}
+
+          {/* Trade Modal and Money Management work on both mobile and desktop */}
+          <TradeModal 
+            visible={isModalVisible}
+            tradeType={tradeType}
+            price={tradeType === 'BUY' ? priceData.ask : priceData.bid}
+            lotSize={getRecommendedLotSize()}
+            currentLevel={getCurrentLevel(account.equity).level}
+            dailyTarget={getCurrentLevel(account.equity).dailyTarget}
+            onClose={() => setModalVisible(false)}
+            onExecute={executeTrade}
+          />
+
+          <MoneyManagement
+            balance={account.equity}
+            visible={isMoneyManagementVisible}
+            onClose={() => setMoneyManagementVisible(false)}
+          />
         </SafeAreaView>
       </LinearGradient>
     </SafeAreaProvider>
