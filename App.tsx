@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ScrollView, StatusBar, StyleSheet, Alert, Modal, View, Text, TouchableOpacity, Dimensions } from 'react-native';
+import { ScrollView, StatusBar, StyleSheet, Alert, Modal, View, Text, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -16,6 +16,7 @@ import {
   MoneyManagement,
   AutoTradingScreen,
   TradingChart,
+  useResponsive,
 } from './src/components';
 
 import { mockAccountData, mockTradeHistory } from './src/data/mockData';
@@ -430,6 +431,115 @@ export default function App(): React.JSX.Element {
     );
   }
 
+  // Responsive hook
+  const { isDesktop, isWeb } = useResponsive();
+
+  // Desktop layout with chart sidebar
+  const renderDesktopLayout = () => (
+    <View style={styles.desktopContainer}>
+      {/* Left Panel - Trading Controls */}
+      <View style={styles.desktopLeftPanel}>
+        <ScrollView 
+          style={styles.desktopScrollView}
+          showsVerticalScrollIndicator={false}
+        >
+          <AccountCard 
+            account={account} 
+            dailyProfit={dailyRealizedProfit}
+            onMoneyManagementPress={() => setMoneyManagementVisible(true)}
+          />
+          <PriceDisplay 
+            priceData={priceData} 
+            onChartPress={() => setChartVisible(true)}
+          />
+          <TradingButtons 
+            onBuy={() => handleTrade('BUY')} 
+            onSell={() => handleTrade('SELL')}
+            bidPrice={priceData.bid}
+            askPrice={priceData.ask}
+            disabled={isDailyTargetReached(account.equity, dailyRealizedProfit) || hasOpenOrders()}
+            dailyProfit={dailyRealizedProfit}
+            dailyTarget={getCurrentLevel(account.equity).dailyTarget}
+            hasOpenOrder={hasOpenOrders()}
+            recommendedLotSize={getRecommendedLotSize()}
+          />
+        </ScrollView>
+      </View>
+
+      {/* Center Panel - Chart */}
+      <View style={styles.desktopCenterPanel}>
+        <View style={styles.desktopChartHeader}>
+          <Text style={styles.desktopChartTitle}>XAUUSD Chart</Text>
+        </View>
+        <TradingChart 
+          symbol="OANDA:XAUUSD" 
+          interval="15" 
+          theme="dark" 
+          height={Dimensions.get('window').height - 140}
+        />
+      </View>
+
+      {/* Right Panel - History */}
+      <View style={styles.desktopRightPanel}>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <TradeHistory 
+            trades={tradeHistory} 
+            currentPrice={priceData.bid} 
+            onCloseTrade={handleCloseTrade}
+          />
+        </ScrollView>
+      </View>
+    </View>
+  );
+
+  // Mobile layout
+  const renderMobileLayout = () => (
+    <>
+      {activeTab === 'auto' ? (
+        <AutoTradingScreen onBack={() => setActiveTab('trade')} />
+      ) : activeTab === 'history' ? (
+        <ScrollView 
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+        >
+          <TradeHistory 
+            trades={tradeHistory} 
+            currentPrice={priceData.bid} 
+            onCloseTrade={handleCloseTrade}
+          />
+        </ScrollView>
+      ) : (
+        <ScrollView 
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+        >
+          <AccountCard 
+            account={account} 
+            dailyProfit={dailyRealizedProfit}
+            onMoneyManagementPress={() => setMoneyManagementVisible(true)}
+          />
+          <PriceDisplay 
+            priceData={priceData} 
+            onChartPress={() => setChartVisible(true)}
+          />
+          <TradingButtons 
+            onBuy={() => handleTrade('BUY')} 
+            onSell={() => handleTrade('SELL')}
+            bidPrice={priceData.bid}
+            askPrice={priceData.ask}
+            disabled={isDailyTargetReached(account.equity, dailyRealizedProfit) || hasOpenOrders()}
+            dailyProfit={dailyRealizedProfit}
+            dailyTarget={getCurrentLevel(account.equity).dailyTarget}
+            hasOpenOrder={hasOpenOrders()}
+            recommendedLotSize={getRecommendedLotSize()}
+          />
+        </ScrollView>
+      )}
+
+      <BottomNav activeTab={activeTab} onTabPress={setActiveTab} />
+    </>
+  );
+
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="light-content" backgroundColor="#0D1421" />
@@ -440,91 +550,55 @@ export default function App(): React.JSX.Element {
         <SafeAreaView style={styles.safeArea}>
           <Header onLogout={handleLogout} />
           
-          {activeTab === 'auto' ? (
-            <AutoTradingScreen onBack={() => setActiveTab('trade')} />
-          ) : activeTab === 'history' ? (
-            <ScrollView 
-              style={styles.scrollView}
-              showsVerticalScrollIndicator={false}
-            >
-              <TradeHistory 
-                trades={tradeHistory} 
-                currentPrice={priceData.bid} 
-                onCloseTrade={handleCloseTrade}
-              />
-            </ScrollView>
-          ) : (
-            <ScrollView 
-              style={styles.scrollView}
-              showsVerticalScrollIndicator={false}
-            >
-              <AccountCard 
-                account={account} 
-                dailyProfit={dailyRealizedProfit}
-                onMoneyManagementPress={() => setMoneyManagementVisible(true)}
-              />
-              <PriceDisplay 
-                priceData={priceData} 
-                onChartPress={() => setChartVisible(true)}
-              />
-              <TradingButtons 
-                onBuy={() => handleTrade('BUY')} 
-                onSell={() => handleTrade('SELL')}
-                bidPrice={priceData.bid}
-                askPrice={priceData.ask}
-                disabled={isDailyTargetReached(account.equity, dailyRealizedProfit) || hasOpenOrders()}
-                dailyProfit={dailyRealizedProfit}
+          {isDesktop ? renderDesktopLayout() : renderMobileLayout()}
+
+          {/* Only show these modals on mobile, desktop has inline */}
+          {!isDesktop && (
+            <>
+              <TradeModal 
+                visible={isModalVisible}
+                tradeType={tradeType}
+                price={tradeType === 'BUY' ? priceData.ask : priceData.bid}
+                lotSize={getRecommendedLotSize()}
+                currentLevel={getCurrentLevel(account.equity).level}
                 dailyTarget={getCurrentLevel(account.equity).dailyTarget}
-                hasOpenOrder={hasOpenOrders()}
-                recommendedLotSize={getRecommendedLotSize()}
+                onClose={() => setModalVisible(false)}
+                onExecute={executeTrade}
               />
-            </ScrollView>
+
+              <MoneyManagement
+                balance={account.equity}
+                visible={isMoneyManagementVisible}
+                onClose={() => setMoneyManagementVisible(false)}
+              />
+
+              {/* Full Screen Chart Modal */}
+              <Modal
+                visible={isChartVisible}
+                animationType="slide"
+                presentationStyle="fullScreen"
+                onRequestClose={() => setChartVisible(false)}
+              >
+                <View style={styles.chartModalContainer}>
+                  <View style={styles.chartModalHeader}>
+                    <Text style={styles.chartModalTitle}>XAUUSD Chart</Text>
+                    <TouchableOpacity 
+                      style={styles.chartCloseButton}
+                      onPress={() => setChartVisible(false)}
+                    >
+                      <Text style={styles.chartCloseButtonText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <TradingChart 
+                    symbol="OANDA:XAUUSD" 
+                    interval="15" 
+                    theme="dark" 
+                    height={Dimensions.get('window').height - 100}
+                  />
+                </View>
+              </Modal>
+            </>
           )}
-
-          <BottomNav activeTab={activeTab} onTabPress={setActiveTab} />
-
-          <TradeModal 
-            visible={isModalVisible}
-            tradeType={tradeType}
-            price={tradeType === 'BUY' ? priceData.ask : priceData.bid}
-            lotSize={getRecommendedLotSize()}
-            currentLevel={getCurrentLevel(account.equity).level}
-            dailyTarget={getCurrentLevel(account.equity).dailyTarget}
-            onClose={() => setModalVisible(false)}
-            onExecute={executeTrade}
-          />
-
-          <MoneyManagement
-            balance={account.equity}
-            visible={isMoneyManagementVisible}
-            onClose={() => setMoneyManagementVisible(false)}
-          />
-
-          {/* Full Screen Chart Modal */}
-          <Modal
-            visible={isChartVisible}
-            animationType="slide"
-            presentationStyle="fullScreen"
-            onRequestClose={() => setChartVisible(false)}
-          >
-            <View style={styles.chartModalContainer}>
-              <View style={styles.chartModalHeader}>
-                <Text style={styles.chartModalTitle}>XAUUSD Chart</Text>
-                <TouchableOpacity 
-                  style={styles.chartCloseButton}
-                  onPress={() => setChartVisible(false)}
-                >
-                  <Text style={styles.chartCloseButtonText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-              <TradingChart 
-                symbol="OANDA:XAUUSD" 
-                interval="15" 
-                theme="dark" 
-                height={Dimensions.get('window').height - 100}
-              />
-            </View>
-          </Modal>
         </SafeAreaView>
       </LinearGradient>
     </SafeAreaProvider>
@@ -545,6 +619,44 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
     paddingHorizontal: 16,
+  },
+  // Desktop Layout Styles
+  desktopContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    gap: 16,
+  },
+  desktopLeftPanel: {
+    width: 320,
+    flexShrink: 0,
+  },
+  desktopScrollView: {
+    flex: 1,
+  },
+  desktopCenterPanel: {
+    flex: 1,
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    overflow: 'hidden',
+    minWidth: 400,
+  },
+  desktopChartHeader: {
+    backgroundColor: '#0F172A',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  desktopChartTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  desktopRightPanel: {
+    width: 350,
+    flexShrink: 0,
   },
   chartModalContainer: {
     flex: 1,
