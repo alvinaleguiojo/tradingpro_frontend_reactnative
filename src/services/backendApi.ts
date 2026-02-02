@@ -5,7 +5,7 @@ import * as SecureStore from 'expo-secure-store';
 // Use your local IP for physical device testing (e.g., http://192.168.1.4:4000)
 // Use http://localhost:4000 for web browser testing
 // Use http://10.0.2.2:4000 for Android emulator
-const BACKEND_API_URL = 'http://192.168.1.4:4000';
+const BACKEND_API_URL = 'https://tradingpro-backend-nestjs.vercel.app';
 const BACKEND_URL_KEY = 'backend_api_url';
 
 // Get the configured backend URL
