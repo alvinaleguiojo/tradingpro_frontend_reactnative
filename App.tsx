@@ -629,18 +629,20 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   desktopLeftPanel: {
-    width: 320,
+    width: 340,
+    minWidth: 300,
     flexShrink: 0,
   },
   desktopScrollView: {
     flex: 1,
+    paddingRight: 4,
   },
   desktopCenterPanel: {
     flex: 1,
     backgroundColor: '#1E293B',
     borderRadius: 16,
     overflow: 'hidden',
-    minWidth: 400,
+    minWidth: 300,
   },
   desktopChartHeader: {
     backgroundColor: '#0F172A',
@@ -655,7 +657,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   desktopRightPanel: {
-    width: 350,
+    width: 380,
+    minWidth: 320,
     flexShrink: 0,
   },
   chartModalContainer: {

@@ -1,10 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Dimensions, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-
-const { width } = Dimensions.get('window');
-const BUTTON_WIDTH = (width - 48) / 2;
 
 interface TradingButtonsProps {
   onBuy: () => void;
@@ -83,7 +80,7 @@ const TradingButtons: React.FC<TradingButtonsProps> = ({
       <View style={[styles.buttonsRow, disabled && styles.buttonsDisabled]}>
         {/* SELL Button */}
         <TouchableOpacity 
-          style={{ width: BUTTON_WIDTH }}
+          style={styles.buttonWrapper}
           onPress={disabled ? undefined : onSell}
           activeOpacity={disabled ? 1 : 0.8}
           disabled={disabled}
@@ -113,7 +110,7 @@ const TradingButtons: React.FC<TradingButtonsProps> = ({
 
         {/* BUY Button */}
         <TouchableOpacity 
-          style={{ width: BUTTON_WIDTH }}
+          style={styles.buttonWrapper}
           onPress={disabled ? undefined : onBuy}
           activeOpacity={disabled ? 1 : 0.8}
           disabled={disabled}
@@ -237,6 +234,10 @@ const styles = StyleSheet.create({
   buttonsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 12,
+  },
+  buttonWrapper: {
+    flex: 1,
   },
   buttonsDisabled: {
     opacity: 0.7,
