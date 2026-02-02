@@ -1,5 +1,5 @@
 // MT5 API Service
-import * as SecureStore from 'expo-secure-store';
+import Storage from '../utils/storage';
 
 const API_BASE_URL = 'https://mt5.mtapi.io';
 const SESSION_KEY = 'mt5_session_id';
@@ -305,8 +305,8 @@ class MT5ApiService {
   // Save session and credentials to secure storage
   private async saveSession(sessionId: string, credentials: ConnectParams): Promise<void> {
     try {
-      await SecureStore.setItemAsync(SESSION_KEY, sessionId);
-      await SecureStore.setItemAsync(LOGIN_CREDENTIALS_KEY, JSON.stringify(credentials));
+      await Storage.setItemAsync(SESSION_KEY, sessionId);
+      await Storage.setItemAsync(LOGIN_CREDENTIALS_KEY, JSON.stringify(credentials));
     } catch (error) {
       console.error('Failed to save session:', error);
     }
@@ -315,8 +315,8 @@ class MT5ApiService {
   // Load saved session from storage
   async loadSavedSession(): Promise<{ sessionId: string; credentials: ConnectParams } | null> {
     try {
-      const sessionId = await SecureStore.getItemAsync(SESSION_KEY);
-      const credentialsStr = await SecureStore.getItemAsync(LOGIN_CREDENTIALS_KEY);
+      const sessionId = await Storage.getItemAsync(SESSION_KEY);
+      const credentialsStr = await Storage.getItemAsync(LOGIN_CREDENTIALS_KEY);
       
       if (sessionId && credentialsStr) {
         const credentials = JSON.parse(credentialsStr) as ConnectParams;
@@ -363,8 +363,8 @@ class MT5ApiService {
   // Clear saved session from storage
   async clearSavedSession(): Promise<void> {
     try {
-      await SecureStore.deleteItemAsync(SESSION_KEY);
-      await SecureStore.deleteItemAsync(LOGIN_CREDENTIALS_KEY);
+      await Storage.deleteItemAsync(SESSION_KEY);
+      await Storage.deleteItemAsync(LOGIN_CREDENTIALS_KEY);
       this.sessionId = null;
     } catch (error) {
       console.error('Failed to clear session:', error);
