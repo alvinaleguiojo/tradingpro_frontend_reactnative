@@ -53,6 +53,9 @@ export default function App(): React.JSX.Element {
   const [isMoneyManagementVisible, setMoneyManagementVisible] = useState<boolean>(false);
   const [isChartVisible, setChartVisible] = useState<boolean>(false);
 
+  // Responsive hook - must be called at top level, not after conditionals
+  const { isDesktop } = useResponsive();
+
   // Check for OTA updates automatically
   const { isChecking: isCheckingUpdate, isDownloading: isDownloadingUpdate } = useAppUpdate();
 
@@ -430,9 +433,6 @@ export default function App(): React.JSX.Element {
       </SafeAreaProvider>
     );
   }
-
-  // Responsive hook
-  const { isDesktop, isWeb } = useResponsive();
 
   // Desktop layout with chart sidebar
   const renderDesktopLayout = () => (
