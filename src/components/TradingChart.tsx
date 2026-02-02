@@ -102,26 +102,39 @@ const TradingChartNative: React.FC<TradingChartProps> = ({
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { 
-            background-color: ${theme === 'dark' ? '#0D1421' : '#ffffff'}; 
+          html, body { 
+            height: 100%;
+            width: 100%;
+            background-color: ${theme === 'dark' ? '#131722' : '#ffffff'}; 
             overflow: hidden;
           }
           .tradingview-widget-container { 
-            height: 100vh; 
-            width: 100vw; 
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 100%;
+            width: 100%;
           }
           .tradingview-widget-container__widget { 
-            height: 100%; 
-            width: 100%; 
+            height: 100% !important;
+            width: 100% !important;
+          }
+          iframe {
+            height: 100% !important;
+            width: 100% !important;
           }
         </style>
       </head>
       <body>
         <div class="tradingview-widget-container">
-          <div class="tradingview-widget-container__widget"></div>
+          <div class="tradingview-widget-container__widget" style="height:100%;width:100%;"></div>
           <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
             ${JSON.stringify({
               autosize: true,
+              width: '100%',
+              height: '100%',
               symbol: symbol,
               interval: interval,
               timezone: 'Etc/UTC',
@@ -135,7 +148,7 @@ const TradingChartNative: React.FC<TradingChartProps> = ({
               hide_legend: false,
               save_image: false,
               hide_volume: false,
-              backgroundColor: theme === 'dark' ? 'rgba(13, 20, 33, 1)' : 'rgba(255, 255, 255, 1)',
+              backgroundColor: theme === 'dark' ? 'rgba(19, 23, 34, 1)' : 'rgba(255, 255, 255, 1)',
             })}
           </script>
         </div>
@@ -166,8 +179,11 @@ const TradingChartNative: React.FC<TradingChartProps> = ({
         javaScriptEnabled={true}
         domStorageEnabled={true}
         startInLoadingState={false}
-        scalesPageToFit={true}
+        scalesPageToFit={false}
         scrollEnabled={false}
+        originWhitelist={['*']}
+        mixedContentMode="always"
+        allowsFullscreenVideo={true}
         onLoadEnd={() => setIsLoading(false)}
         onError={() => {
           setHasError(true);
