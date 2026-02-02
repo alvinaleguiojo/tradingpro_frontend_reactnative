@@ -21,6 +21,7 @@ import { mockAccountData, mockTradeHistory } from './src/data/mockData';
 import { Account, Trade, PriceData, TradeType, TabType } from './src/types';
 import { mt5Api, OpenOrder, Quote } from './src/services/api';
 import { getCurrentLevel, isDailyTargetReached } from './src/data/moneyManagement';
+import { useAppUpdate } from './src/hooks/useAppUpdate';
 
 // Default price data before API loads
 const defaultPriceData: PriceData = {
@@ -48,6 +49,9 @@ export default function App(): React.JSX.Element {
   const [tradeType, setTradeType] = useState<TradeType | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('trade');
   const [isMoneyManagementVisible, setMoneyManagementVisible] = useState<boolean>(false);
+
+  // Check for OTA updates automatically
+  const { isChecking: isCheckingUpdate, isDownloading: isDownloadingUpdate } = useAppUpdate();
 
   // Helper to check if a date is today
   // Check if a date string is today (using UTC to match MT5 server time)

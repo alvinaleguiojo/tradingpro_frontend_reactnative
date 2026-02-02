@@ -441,7 +441,13 @@ export const getMt5Status = async (): Promise<{
   try {
     const baseUrl = await getBackendUrl();
     const response = await fetch(`${baseUrl}/mt5/status`, { method: 'GET' });
-    return await response.json();
+    const result = await response.json();
+    // Backend returns { success, data: { hasCredentials, connected, ... } }
+    return {
+      hasCredentials: result.data?.hasCredentials || false,
+      isConnected: result.data?.connected || false,
+      accountInfo: result.data || null,
+    };
   } catch {
     return {
       hasCredentials: false,
