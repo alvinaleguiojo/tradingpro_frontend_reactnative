@@ -15,6 +15,7 @@ import {
   SplashScreen,
   MoneyManagement,
   AutoTradingScreen,
+  TradingChart,
 } from './src/components';
 
 import { mockAccountData, mockTradeHistory } from './src/data/mockData';
@@ -449,6 +450,12 @@ export default function App(): React.JSX.Element {
                 account={account} 
                 dailyProfit={dailyRealizedProfit}
                 onMoneyManagementPress={() => setMoneyManagementVisible(true)}
+              />
+              <TradingChart 
+                symbol="OANDA:XAUUSD" 
+                interval="15" 
+                theme="dark" 
+                height={350}
               />
               <PriceDisplay priceData={priceData} />
               <TradingButtons 

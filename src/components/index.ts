@@ -9,3 +9,4 @@ export { default as LoginScreen } from './LoginScreen';
 export { default as SplashScreen } from './SplashScreen';
 export { default as MoneyManagement } from './MoneyManagement';
 export { default as AutoTradingScreen } from './AutoTradingScreen';
+export { default as TradingChart } from './TradingChart';
