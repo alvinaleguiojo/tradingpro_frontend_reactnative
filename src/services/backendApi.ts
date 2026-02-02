@@ -224,6 +224,26 @@ export const getOpenTrades = async (): Promise<Trade[]> => {
 };
 
 /**
+ * Get trade history (closed trades) from MT5
+ */
+export const getTradeHistory = async (days: number = 30): Promise<any[]> => {
+  const result = await backendFetch<{ success: boolean; data: any[]; count: number }>(
+    `/mt5/trade-history?days=${days}`
+  );
+  return result.data || [];
+};
+
+/**
+ * Get deals history (includes deposits/withdrawals) from MT5
+ */
+export const getDealsHistory = async (days: number = 30): Promise<any[]> => {
+  const result = await backendFetch<{ success: boolean; data: any[]; count: number }>(
+    `/mt5/deals?days=${days}`
+  );
+  return result.data || [];
+};
+
+/**
  * Get recent signals
  */
 export const getRecentSignals = async (limit: number = 20): Promise<TradingSignal[]> => {
