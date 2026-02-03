@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, RefreshControl, ActivityIndicator, Modal, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Trade } from '../types';
-import { getOpenTrades, getTradeHistory, getDealsHistory } from '../services/backendApi';
+import { getOpenTrades, getTradeHistory, getDealsHistory, modifyOrder } from '../services/backendApi';
 
 type FilterType = 'all' | 'open' | 'closed' | 'deposits';
 
@@ -18,6 +18,8 @@ interface HistoryItem {
   status: 'OPEN' | 'CLOSED';
   time: string;
   comment?: string;
+  stopLoss?: number;
+  takeProfit?: number;
 }
 
 interface TradeHistoryProps {
@@ -32,6 +34,13 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [totalDeposits, setTotalDeposits] = useState(0);
+  
+  // SL/TP Edit Modal State
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingTrade, setEditingTrade] = useState<HistoryItem | null>(null);
+  const [editStopLoss, setEditStopLoss] = useState('');
+  const [editTakeProfit, setEditTakeProfit] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const safeNumber = (val: any): number => (typeof val === 'number' && !isNaN(val) ? val : 0);
 
@@ -61,6 +70,8 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
             status: isOpen ? 'OPEN' : 'CLOSED',
             time: trade.openTime || trade.closeTime || new Date().toISOString(),
             comment: trade.comment,
+            stopLoss: safeNumber(trade.stopLoss),
+            takeProfit: safeNumber(trade.takeProfit),
           });
         });
         console.log('TradeHistory: After propTrades mapping, items:', items.length);
@@ -86,6 +97,8 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
                 status: 'OPEN',
                 time: trade.openTime || new Date().toISOString(),
                 comment: trade.comment,
+                stopLoss: safeNumber(trade.stopLoss),
+                takeProfit: safeNumber(trade.takeProfit),
               });
             }
           });
@@ -351,6 +364,14 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
               onCloseTrade(trade);
             }
           };
+
+          // Handle edit SL/TP button press
+          const handleEditSlTp = () => {
+            setEditingTrade(item);
+            setEditStopLoss(item.stopLoss?.toString() || '');
+            setEditTakeProfit(item.takeProfit?.toString() || '');
+            setEditModalVisible(true);
+          };
           
           return (
             <View 
@@ -385,6 +406,21 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
                   <Text style={styles.itemDetails}>
                     {safeNumber(item.volume).toFixed(2)} Lot @ {safeNumber(item.openPrice).toFixed(2)}
                   </Text>
+                  {/* SL/TP Display */}
+                  <View style={styles.slTpContainer}>
+                    <Text style={[styles.slTpText, { color: '#EF4444' }]}>
+                      SL: {item.stopLoss && item.stopLoss > 0 ? item.stopLoss.toFixed(2) : '--'}
+                    </Text>
+                    <Text style={styles.slTpDivider}>|</Text>
+                    <Text style={[styles.slTpText, { color: '#10B981' }]}>
+                      TP: {item.takeProfit && item.takeProfit > 0 ? item.takeProfit.toFixed(2) : '--'}
+                    </Text>
+                    {item.status === 'OPEN' && (
+                      <TouchableOpacity onPress={handleEditSlTp} style={styles.editSlTpButton}>
+                        <Ionicons name="pencil" size={12} color="#FFD700" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                   <Text style={styles.itemTime}>{formatDate(item.time)}</Text>
                 </View>
               </View>
@@ -415,6 +451,98 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
           </View>
         )}
       </ScrollView>
+
+      {/* Edit SL/TP Modal */}
+      <Modal
+        visible={editModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit SL/TP</Text>
+              <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#8E9BAE" />
+              </TouchableOpacity>
+            </View>
+
+            {editingTrade && (
+              <View style={styles.modalTradeInfo}>
+                <Text style={styles.modalTradeSymbol}>{editingTrade.symbol}</Text>
+                <Text style={styles.modalTradeDetails}>
+                  {editingTrade.tradeType} {editingTrade.volume?.toFixed(2)} @ {editingTrade.openPrice?.toFixed(2)}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Stop Loss</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editStopLoss}
+                onChangeText={setEditStopLoss}
+                placeholder="Enter stop loss price"
+                placeholderTextColor="#6B7280"
+                keyboardType="decimal-pad"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Take Profit</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editTakeProfit}
+                onChangeText={setEditTakeProfit}
+                placeholder="Enter take profit price"
+                placeholderTextColor="#6B7280"
+                keyboardType="decimal-pad"
+              />
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setEditModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+                onPress={async () => {
+                  if (!editingTrade) return;
+                  setIsSaving(true);
+                  try {
+                    const sl = parseFloat(editStopLoss) || 0;
+                    const tp = parseFloat(editTakeProfit) || 0;
+                    const result = await modifyOrder(editingTrade.id, sl, tp);
+                    if (result.success) {
+                      Alert.alert('Success', 'SL/TP updated successfully');
+                      setEditModalVisible(false);
+                      // Refresh data
+                      fetchAllData();
+                    } else {
+                      Alert.alert('Error', 'Failed to update SL/TP');
+                    }
+                  } catch (error: any) {
+                    Alert.alert('Error', error.message || 'Failed to update SL/TP');
+                  } finally {
+                    setIsSaving(false);
+                  }
+                }}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <ActivityIndicator size="small" color="#0D1421" />
+                ) : (
+                  <Text style={styles.saveButtonText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -639,6 +767,121 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     marginLeft: 4,
+  },
+  // SL/TP Display Styles
+  slTpContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  slTpText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  slTpDivider: {
+    color: '#4B5563',
+    marginHorizontal: 6,
+    fontSize: 11,
+  },
+  editSlTpButton: {
+    marginLeft: 8,
+    padding: 4,
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    borderRadius: 4,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: '#3B4A5E',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  modalTradeInfo: {
+    backgroundColor: '#0D1421',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  modalTradeSymbol: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  modalTradeDetails: {
+    fontSize: 13,
+    color: '#8E9BAE',
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8E9BAE',
+    marginBottom: 8,
+  },
+  textInput: {
+    backgroundColor: '#0D1421',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#3B4A5E',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#374151',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  saveButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#FFD700',
+    alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  saveButtonText: {
+    color: '#0D1421',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
 

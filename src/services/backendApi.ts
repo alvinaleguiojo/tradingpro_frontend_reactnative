@@ -582,6 +582,20 @@ export const getMt5Status = async (): Promise<{
 // ================== HEALTH CHECK ==================
 
 /**
+ * Modify order SL/TP
+ */
+export const modifyOrder = async (
+  ticket: string,
+  stopLoss?: number,
+  takeProfit?: number
+): Promise<{ success: boolean }> => {
+  return backendFetch('/mt5/order/modify', {
+    method: 'POST',
+    body: JSON.stringify({ ticket, stopLoss, takeProfit }),
+  });
+};
+
+/**
  * Check backend health
  */
 export const checkBackendHealth = async (): Promise<boolean> => {
