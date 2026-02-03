@@ -2,19 +2,30 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Platform, Text, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
 
+interface OpenTrade {
+  id: string;
+  type: 'BUY' | 'SELL';
+  openPrice: number;
+  openTime: string;
+  profit: number;
+  lotSize: number;
+}
+
 interface TradingChartProps {
   symbol?: string;
   interval?: string;
   theme?: 'dark' | 'light';
   height?: number;
+  openTrades?: OpenTrade[];
 }
 
-// Web component using TradingView widget
+// Web component using TradingView widget with trade markers overlay
 const TradingChartWeb: React.FC<TradingChartProps> = ({
   symbol = 'OANDA:XAUUSD',
   interval = '15',
   theme = 'dark',
   height = 400,
+  openTrades = [],
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -72,16 +83,81 @@ const TradingChartWeb: React.FC<TradingChartProps> = ({
   }, [symbol, interval, theme]);
 
   return (
-    <div
-      ref={containerRef}
-      style={{
-        height: height,
-        width: '100%',
-        backgroundColor: theme === 'dark' ? '#0D1421' : '#ffffff',
-        borderRadius: 12,
-        overflow: 'hidden',
-      }}
-    />
+    <div style={{ position: 'relative', height: height, width: '100%' }}>
+      <div
+        ref={containerRef}
+        style={{
+          height: '100%',
+          width: '100%',
+          backgroundColor: theme === 'dark' ? '#0D1421' : '#ffffff',
+          borderRadius: 12,
+          overflow: 'hidden',
+        }}
+      />
+      {/* Trade Entry Markers Overlay */}
+      {openTrades.length > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 60,
+            right: 16,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+            zIndex: 100,
+            maxHeight: height - 100,
+            overflowY: 'auto',
+          }}
+        >
+          {openTrades.map((trade) => (
+            <div
+              key={trade.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: trade.type === 'BUY' ? 'rgba(0, 212, 170, 0.95)' : 'rgba(239, 68, 68, 0.95)',
+                padding: '8px 12px',
+                borderRadius: 8,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                border: `1px solid ${trade.type === 'BUY' ? '#00D4AA' : '#EF4444'}`,
+              }}
+            >
+              <div style={{ marginRight: 8 }}>
+                <span style={{ fontSize: 16 }}>{trade.type === 'BUY' ? '📈' : '📉'}</span>
+              </div>
+              <div>
+                <div style={{ 
+                  color: '#FFFFFF', 
+                  fontSize: 11, 
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}>
+                  {trade.type} @ {trade.openPrice.toFixed(2)}
+                  <span style={{
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    padding: '2px 6px',
+                    borderRadius: 4,
+                    fontSize: 9,
+                  }}>
+                    {trade.lotSize} Lot
+                  </span>
+                </div>
+                <div style={{ 
+                  color: trade.profit >= 0 ? '#FFFFFF' : '#FFE4E4', 
+                  fontSize: 12, 
+                  fontWeight: 700,
+                  marginTop: 2,
+                }}>
+                  {trade.profit >= 0 ? '+' : ''}{trade.profit.toFixed(2)} USD
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -91,9 +167,47 @@ const TradingChartNative: React.FC<TradingChartProps> = ({
   interval = '15',
   theme = 'dark',
   height = 400,
+  openTrades = [],
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+
+  // Generate trade markers HTML for mobile
+  const tradeMarkersHtml = openTrades.length > 0 ? `
+    <div style="
+      position: fixed;
+      top: 60px;
+      right: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 1000;
+      max-height: calc(100% - 80px);
+      overflow-y: auto;
+    ">
+      ${openTrades.map(trade => `
+        <div style="
+          display: flex;
+          align-items: center;
+          background: ${trade.type === 'BUY' ? 'rgba(0, 212, 170, 0.95)' : 'rgba(239, 68, 68, 0.95)'};
+          padding: 6px 10px;
+          border-radius: 6px;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          border: 1px solid ${trade.type === 'BUY' ? '#00D4AA' : '#EF4444'};
+        ">
+          <span style="font-size: 14px; margin-right: 6px;">${trade.type === 'BUY' ? '📈' : '📉'}</span>
+          <div>
+            <div style="color: #fff; font-size: 10px; font-weight: 700;">
+              ${trade.type} @ ${trade.openPrice.toFixed(2)}
+            </div>
+            <div style="color: ${trade.profit >= 0 ? '#fff' : '#FFE4E4'}; font-size: 11px; font-weight: 700;">
+              ${trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)} USD
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  ` : '';
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -128,6 +242,7 @@ const TradingChartNative: React.FC<TradingChartProps> = ({
         </style>
       </head>
       <body>
+        ${tradeMarkersHtml}
         <div class="tradingview-widget-container">
           <div class="tradingview-widget-container__widget" style="height:100%;width:100%;"></div>
           <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>

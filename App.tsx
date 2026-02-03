@@ -497,12 +497,28 @@ export default function App(): React.JSX.Element {
       <View style={styles.desktopCenterPanel}>
         <View style={styles.desktopChartHeader}>
           <Text style={styles.desktopChartTitle}>XAUUSD Chart</Text>
+          {tradeHistory.filter(t => t.status === 'OPEN').length > 0 && (
+            <Text style={styles.desktopChartSubtitle}>
+              {tradeHistory.filter(t => t.status === 'OPEN').length} open position(s)
+            </Text>
+          )}
         </View>
         <TradingChart 
           symbol="OANDA:XAUUSD" 
           interval="15" 
           theme="dark" 
           height={Dimensions.get('window').height - 140}
+          openTrades={tradeHistory
+            .filter(t => t.status === 'OPEN')
+            .map(t => ({
+              id: t.id,
+              type: t.type,
+              openPrice: t.openPrice,
+              openTime: t.openTime,
+              profit: t.profit,
+              lotSize: t.lotSize,
+            }))
+          }
         />
       </View>
 
@@ -605,6 +621,17 @@ export default function App(): React.JSX.Element {
                     interval="15" 
                     theme="dark" 
                     height={Dimensions.get('window').height - 100}
+                    openTrades={tradeHistory
+                      .filter(t => t.status === 'OPEN')
+                      .map(t => ({
+                        id: t.id,
+                        type: t.type,
+                        openPrice: t.openPrice,
+                        openTime: t.openTime,
+                        profit: t.profit,
+                        lotSize: t.lotSize,
+                      }))
+                    }
                   />
                 </View>
               </Modal>
@@ -679,11 +706,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   desktopChartTitle: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  desktopChartSubtitle: {
+    color: '#00D4AA',
+    fontSize: 12,
+    fontWeight: '500',
   },
   desktopRightPanel: {
     width: 380,
