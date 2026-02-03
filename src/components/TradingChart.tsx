@@ -94,19 +94,17 @@ const TradingChartWeb: React.FC<TradingChartProps> = ({
           overflow: 'hidden',
         }}
       />
-      {/* Trade Entry Markers Overlay */}
+      {/* Trade Entry Price Tags - Small labels on the chart */}
       {openTrades.length > 0 && (
         <div
           style={{
             position: 'absolute',
-            top: 60,
-            right: 16,
+            top: 50,
+            left: 8,
             display: 'flex',
             flexDirection: 'column',
-            gap: 8,
+            gap: 4,
             zIndex: 100,
-            maxHeight: height - 100,
-            overflowY: 'auto',
           }}
         >
           {openTrades.map((trade) => (
@@ -115,44 +113,16 @@ const TradingChartWeb: React.FC<TradingChartProps> = ({
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                backgroundColor: trade.type === 'BUY' ? 'rgba(0, 212, 170, 0.95)' : 'rgba(239, 68, 68, 0.95)',
-                padding: '8px 12px',
-                borderRadius: 8,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                border: `1px solid ${trade.type === 'BUY' ? '#00D4AA' : '#EF4444'}`,
+                backgroundColor: trade.type === 'BUY' ? '#00D4AA' : '#EF4444',
+                padding: '3px 8px',
+                borderRadius: 4,
+                fontSize: 10,
+                fontWeight: 700,
+                color: '#FFFFFF',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
               }}
             >
-              <div style={{ marginRight: 8 }}>
-                <span style={{ fontSize: 16 }}>{trade.type === 'BUY' ? '📈' : '📉'}</span>
-              </div>
-              <div>
-                <div style={{ 
-                  color: '#FFFFFF', 
-                  fontSize: 11, 
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                }}>
-                  {trade.type} @ {trade.openPrice.toFixed(2)}
-                  <span style={{
-                    backgroundColor: 'rgba(255,255,255,0.2)',
-                    padding: '2px 6px',
-                    borderRadius: 4,
-                    fontSize: 9,
-                  }}>
-                    {trade.lotSize} Lot
-                  </span>
-                </div>
-                <div style={{ 
-                  color: trade.profit >= 0 ? '#FFFFFF' : '#FFE4E4', 
-                  fontSize: 12, 
-                  fontWeight: 700,
-                  marginTop: 2,
-                }}>
-                  {trade.profit >= 0 ? '+' : ''}{trade.profit.toFixed(2)} USD
-                </div>
-              </div>
+              {trade.type === 'BUY' ? '▲' : '▼'} {trade.openPrice.toFixed(2)}
             </div>
           ))}
         </div>
@@ -172,38 +142,30 @@ const TradingChartNative: React.FC<TradingChartProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  // Generate trade markers HTML for mobile
+  // Generate trade markers HTML for mobile - small price tags
   const tradeMarkersHtml = openTrades.length > 0 ? `
     <div style="
       position: fixed;
-      top: 60px;
-      right: 10px;
+      top: 50px;
+      left: 8px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 4px;
       z-index: 1000;
-      max-height: calc(100% - 80px);
-      overflow-y: auto;
     ">
       ${openTrades.map(trade => `
         <div style="
           display: flex;
           align-items: center;
-          background: ${trade.type === 'BUY' ? 'rgba(0, 212, 170, 0.95)' : 'rgba(239, 68, 68, 0.95)'};
-          padding: 6px 10px;
-          border-radius: 6px;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-          border: 1px solid ${trade.type === 'BUY' ? '#00D4AA' : '#EF4444'};
+          background: ${trade.type === 'BUY' ? '#00D4AA' : '#EF4444'};
+          padding: 3px 8px;
+          border-radius: 4px;
+          font-size: 10px;
+          font-weight: 700;
+          color: #fff;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         ">
-          <span style="font-size: 14px; margin-right: 6px;">${trade.type === 'BUY' ? '📈' : '📉'}</span>
-          <div>
-            <div style="color: #fff; font-size: 10px; font-weight: 700;">
-              ${trade.type} @ ${trade.openPrice.toFixed(2)}
-            </div>
-            <div style="color: ${trade.profit >= 0 ? '#fff' : '#FFE4E4'}; font-size: 11px; font-weight: 700;">
-              ${trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)} USD
-            </div>
-          </div>
+          ${trade.type === 'BUY' ? '▲' : '▼'} ${trade.openPrice.toFixed(2)}
         </div>
       `).join('')}
     </div>
