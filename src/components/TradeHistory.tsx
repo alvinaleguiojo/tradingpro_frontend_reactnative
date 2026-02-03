@@ -27,7 +27,7 @@ interface TradeHistoryProps {
 }
 
 const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, currentPrice, onCloseTrade }) => {
-  const [filter, setFilter] = useState<FilterType>('all');
+  const [filter, setFilter] = useState<FilterType>('open');
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -198,7 +198,6 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
     .reduce((sum, t) => sum + t.profit, 0);
 
   const filters: { key: FilterType; label: string }[] = [
-    { key: 'all', label: 'All' },
     { key: 'open', label: 'Open' },
     { key: 'closed', label: 'Closed' },
     { key: 'deposits', label: 'Deposits' },
