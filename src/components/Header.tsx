@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface HeaderProps {
@@ -8,14 +8,23 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onLogout }) => {
   const handleLogoutPress = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive', onPress: onLogout },
-      ]
-    );
+    if (Platform.OS === 'web') {
+      // Use browser's native confirm dialog for web
+      const confirmed = window.confirm('Are you sure you want to logout?');
+      if (confirmed && onLogout) {
+        onLogout();
+      }
+    } else {
+      // Use React Native Alert for mobile
+      Alert.alert(
+        'Logout',
+        'Are you sure you want to logout?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Logout', style: 'destructive', onPress: onLogout },
+        ]
+      );
+    }
   };
 
   return (

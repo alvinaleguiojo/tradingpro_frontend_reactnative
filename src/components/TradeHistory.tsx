@@ -319,6 +319,25 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
           // Trade item
           const isBuy = item.tradeType === 'BUY';
           
+          // Handle close trade button press
+          const handleCloseTrade = () => {
+            if (onCloseTrade && item.status === 'OPEN') {
+              // Convert HistoryItem back to Trade type for the callback
+              const trade: Trade = {
+                id: item.id,
+                type: item.tradeType || 'BUY',
+                symbol: item.symbol || 'XAUUSDm',
+                lotSize: item.volume || 0.01,
+                openPrice: item.openPrice || 0,
+                closePrice: item.closePrice,
+                openTime: item.time,
+                profit: item.profit,
+                status: item.status,
+              };
+              onCloseTrade(trade);
+            }
+          };
+          
           return (
             <View 
               key={item.id} 
@@ -361,6 +380,15 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
                   {isProfit ? '+' : ''}{item.profit.toFixed(2)}
                 </Text>
                 <Text style={styles.itemCurrency}>USD</Text>
+                {item.status === 'OPEN' && onCloseTrade && (
+                  <TouchableOpacity 
+                    style={styles.closeButton}
+                    onPress={handleCloseTrade}
+                  >
+                    <Ionicons name="close-circle" size={14} color="#FFFFFF" />
+                    <Text style={styles.closeButtonText}>Close</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           );
@@ -582,6 +610,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     marginTop: 12,
+  },
+  closeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginTop: 8,
+  },
+  closeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
   },
 });
 
