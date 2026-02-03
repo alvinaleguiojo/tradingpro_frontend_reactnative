@@ -42,8 +42,13 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
 
       // First, use props trades if available (these come from MT5 sync)
       if (propTrades && Array.isArray(propTrades) && propTrades.length > 0) {
+        console.log('TradeHistory: Processing propTrades:', propTrades.length, propTrades);
         propTrades.forEach((trade: any) => {
-          const isBuy = trade.type?.includes('Buy') || trade.type === 'BUY' || trade.type === 0;
+          const tradeTypeStr = String(trade.type || '').toUpperCase();
+          const isBuy = tradeTypeStr.includes('BUY') || tradeTypeStr === '0';
+          const tradeStatus = String(trade.status || '').toUpperCase();
+          const isOpen = tradeStatus === 'OPEN';
+          
           items.push({
             id: trade.ticket || trade.id || `trade-${Math.random()}`,
             type: 'trade',
@@ -53,11 +58,12 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
             openPrice: safeNumber(trade.openPrice),
             closePrice: safeNumber(trade.closePrice),
             profit: safeNumber(trade.profit),
-            status: trade.status === 'OPEN' ? 'OPEN' : 'CLOSED',
+            status: isOpen ? 'OPEN' : 'CLOSED',
             time: trade.openTime || trade.closeTime || new Date().toISOString(),
             comment: trade.comment,
           });
         });
+        console.log('TradeHistory: After propTrades mapping, items:', items.length);
       }
 
       // Try to fetch additional data from backend (open trades from MT5)
@@ -191,11 +197,20 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
   };
 
   // Calculate summary stats
-  const openTradesCount = historyItems.filter(t => t.type === 'trade' && t.status === 'OPEN').length;
-  const closedTradesCount = historyItems.filter(t => t.type === 'trade' && t.status === 'CLOSED').length;
-  const totalProfit = historyItems
-    .filter(t => t.type === 'trade')
-    .reduce((sum, t) => sum + t.profit, 0);
+  const allTrades = historyItems.filter(t => t.type === 'trade');
+  const openTradesCount = allTrades.filter(t => t.status === 'OPEN').length;
+  const closedTradesCount = allTrades.filter(t => t.status === 'CLOSED').length;
+  const totalProfit = allTrades.reduce((sum, t) => sum + t.profit, 0);
+  
+  // Debug logging
+  console.log('TradeHistory Stats:', {
+    historyItemsTotal: historyItems.length,
+    allTradesCount: allTrades.length,
+    openTradesCount,
+    closedTradesCount,
+    totalProfit,
+    sampleItems: historyItems.slice(0, 3).map(t => ({ type: t.type, status: t.status, profit: t.profit }))
+  });
 
   const filters: { key: FilterType; label: string }[] = [
     { key: 'open', label: 'Open' },
