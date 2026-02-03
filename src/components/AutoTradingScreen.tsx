@@ -43,26 +43,28 @@ export const AutoTradingScreen: React.FC<AutoTradingScreenProps> = ({ onBack }) 
         return;
       }
 
-      // Check MT5 connection status from backend
-      const mt5Status = await backendApi.getMt5Status();
-      setMt5Connected(mt5Status.isConnected);
-
-      // Fetch all data in parallel
-      const [status, mmStatus, stats, signals, trades, scalpStatus] = await Promise.all([
-        backendApi.getTradingStatus(),
-        backendApi.getMoneyManagementStatus(),
-        backendApi.getTradeStats(),
-        backendApi.getRecentSignals(10),
-        backendApi.getOpenTrades(),
-        backendApi.getScalpingStatus().catch(() => null),
-      ]);
-
-      setTradingStatus(status);
-      setMoneyManagementStatus(mmStatus);
-      setTradeStats(stats);
-      setRecentSignals(signals);
-      setOpenTrades(trades);
-      setScalpingStatus(scalpStatus);
+      // Fetch all data in a single request using the combined dashboard endpoint
+      // This reduces 7+ API calls to just 1, significantly improving load times
+      const dashboard = await backendApi.getDashboard(10);
+      
+      setMt5Connected(dashboard.mt5Status?.isConnected ?? false);
+      setTradingStatus(dashboard.tradingStatus);
+      setScalpingStatus(dashboard.scalpingStatus ? {
+        enabled: dashboard.scalpingStatus.enabled,
+        config: dashboard.scalpingStatus.config,
+        description: dashboard.scalpingStatus.enabled 
+          ? 'Aggressive scalping mode uses M5 timeframe, lower confidence thresholds, and tighter stops'
+          : 'Standard ICT mode',
+      } : null);
+      
+      // Handle money management status (may have error)
+      if (dashboard.moneyManagementStatus && !('error' in dashboard.moneyManagementStatus)) {
+        setMoneyManagementStatus(dashboard.moneyManagementStatus as backendApi.MoneyManagementStatus);
+      }
+      
+      setTradeStats(dashboard.tradeStats);
+      setRecentSignals(dashboard.recentSignals);
+      setOpenTrades(dashboard.openTrades);
     } catch (error: any) {
       console.error('Error fetching data:', error);
       Alert.alert('Error', error.message || 'Failed to fetch data');

@@ -135,6 +135,7 @@ export interface TradeStats {
   losingTrades: number;
   winRate: number;
   totalProfit: number;
+  error?: string;
 }
 
 export interface TradingLog {
@@ -156,6 +157,32 @@ export interface MarketAnalysis {
   killZone: any;
   bias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
   recommendedAction: 'BUY' | 'SELL' | 'WAIT';
+}
+
+export interface Mt5Status {
+  isConnected: boolean;
+  account?: any;
+  error?: string;
+}
+
+// Combined dashboard response - all data in one request
+export interface DashboardData {
+  tradingStatus: TradingStatus;
+  scalpingStatus: {
+    enabled: boolean;
+    config: ScalpingConfig;
+  };
+  mt5Status: Mt5Status;
+  moneyManagementStatus: MoneyManagementStatus | { error: string };
+  tradeStats: TradeStats;
+  recentSignals: TradingSignal[];
+  openTrades: Trade[];
+}
+
+export interface DashboardResponse {
+  success: boolean;
+  duration: string;
+  data: DashboardData;
 }
 
 // ================== API FUNCTIONS ==================
@@ -288,6 +315,15 @@ export const getTradingLogs = async (limit: number = 50): Promise<TradingLog[]> 
  */
 export const getTradeStats = async (): Promise<TradeStats> => {
   const result = await backendFetch<{ success: boolean; data: TradeStats }>('/trading/stats');
+  return result.data;
+};
+
+/**
+ * Get all dashboard data in a single request
+ * This significantly reduces load times by combining 7+ API calls into 1
+ */
+export const getDashboard = async (signalLimit: number = 10): Promise<DashboardData> => {
+  const result = await backendFetch<DashboardResponse>(`/trading/dashboard?signalLimit=${signalLimit}`);
   return result.data;
 };
 
