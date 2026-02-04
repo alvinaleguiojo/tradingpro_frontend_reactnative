@@ -255,6 +255,12 @@ export default function App(): React.JSX.Element {
       try {
         const quote = await backendApi.getQuote('XAUUSDm');
         
+        // Skip update if quote is invalid
+        if (!quote || typeof quote.bid !== 'number' || typeof quote.ask !== 'number') {
+          console.warn('Invalid quote received:', quote);
+          return;
+        }
+        
         setPriceData(prevData => {
           const change = quote.bid - (prevData.bid || quote.bid);
           const changePercent = prevData.bid > 0 
@@ -307,17 +313,25 @@ export default function App(): React.JSX.Element {
     return tradeHistory.some(trade => trade.status === 'OPEN');
   };
 
+  // Safe number helper
+  const safeNumber = (val: any): number => (typeof val === 'number' && !isNaN(val) ? val : 0);
+
   // Get the lot size from money management based on current balance
   const getRecommendedLotSize = (): number => {
-    return getCurrentLevel(account.equity).lotSize;
+    const level = getCurrentLevel(safeNumber(account?.equity));
+    return level?.lotSize || 0.01;
   };
 
   const handleTrade = (type: TradeType): void => {
+    const equity = safeNumber(account?.equity);
+    const level = getCurrentLevel(equity);
+    const dailyTarget = level?.dailyTarget || 0;
+    
     // Check if daily target is reached
-    if (isDailyTargetReached(account.equity, dailyRealizedProfit)) {
+    if (isDailyTargetReached(equity, dailyRealizedProfit)) {
       showAlert(
         '🎉 Daily Target Reached!',
-        `Congratulations! You've hit your daily target of $${getCurrentLevel(account.equity).dailyTarget.toFixed(2)}.\n\nTrading is paused to protect your profits. Come back tomorrow!`
+        `Congratulations! You've hit your daily target of $${dailyTarget.toFixed(2)}.\n\nTrading is paused to protect your profits. Come back tomorrow!`
       );
       return;
     }
@@ -473,11 +487,11 @@ export default function App(): React.JSX.Element {
           <TradingButtons 
             onBuy={() => handleTrade('BUY')} 
             onSell={() => handleTrade('SELL')}
-            bidPrice={priceData.bid}
-            askPrice={priceData.ask}
-            disabled={isDailyTargetReached(account.equity, dailyRealizedProfit) || hasOpenOrders()}
+            bidPrice={safeNumber(priceData?.bid)}
+            askPrice={safeNumber(priceData?.ask)}
+            disabled={isDailyTargetReached(safeNumber(account?.equity), dailyRealizedProfit) || hasOpenOrders()}
             dailyProfit={dailyRealizedProfit}
-            dailyTarget={getCurrentLevel(account.equity).dailyTarget}
+            dailyTarget={getCurrentLevel(safeNumber(account?.equity))?.dailyTarget || 0}
             hasOpenOrder={hasOpenOrders()}
             recommendedLotSize={getRecommendedLotSize()}
           />
@@ -569,11 +583,11 @@ export default function App(): React.JSX.Element {
           <TradingButtons 
             onBuy={() => handleTrade('BUY')} 
             onSell={() => handleTrade('SELL')}
-            bidPrice={priceData.bid}
-            askPrice={priceData.ask}
-            disabled={isDailyTargetReached(account.equity, dailyRealizedProfit) || hasOpenOrders()}
+            bidPrice={safeNumber(priceData?.bid)}
+            askPrice={safeNumber(priceData?.ask)}
+            disabled={isDailyTargetReached(safeNumber(account?.equity), dailyRealizedProfit) || hasOpenOrders()}
             dailyProfit={dailyRealizedProfit}
-            dailyTarget={getCurrentLevel(account.equity).dailyTarget}
+            dailyTarget={getCurrentLevel(safeNumber(account?.equity))?.dailyTarget || 0}
             hasOpenOrder={hasOpenOrders()}
             recommendedLotSize={getRecommendedLotSize()}
           />

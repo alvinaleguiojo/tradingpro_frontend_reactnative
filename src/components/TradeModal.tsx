@@ -25,10 +25,18 @@ const TradeModal: React.FC<TradeModalProps> = ({
   onClose, 
   onExecute 
 }) => {
+  // Safe number helper
+  const safeNumber = (val: any): number => (typeof val === 'number' && !isNaN(val) ? val : 0);
+  
+  const safePrice = safeNumber(price);
+  const safeLotSize = safeNumber(lotSize) || 0.01;
+  const safeDailyTarget = safeNumber(dailyTarget);
+  const safeLevel = safeNumber(currentLevel) || 1;
+  
   const isBuy = tradeType === 'BUY';
 
-  const marginRequired = lotSize * 1000;
-  const pipValue = lotSize * 10;
+  const marginRequired = safeLotSize * 1000;
+  const pipValue = safeLotSize * 10;
 
   return (
     <Modal
@@ -61,7 +69,7 @@ const TradeModal: React.FC<TradeModalProps> = ({
           <View style={styles.priceSection}>
             <Text style={styles.priceLabel}>Execution Price</Text>
             <Text style={[styles.priceValue, { color: isBuy ? '#00D4AA' : '#EF4444' }]}>
-              ${price?.toFixed(2)}
+              ${safePrice.toFixed(2)}
             </Text>
           </View>
 
@@ -80,15 +88,15 @@ const TradeModal: React.FC<TradeModalProps> = ({
             <View style={styles.mmInfo}>
               <View style={styles.mmRow}>
                 <Text style={styles.mmLabel}>Current Level</Text>
-                <Text style={styles.mmValue}>Level {currentLevel}</Text>
+                <Text style={styles.mmValue}>Level {safeLevel}</Text>
               </View>
               <View style={styles.mmRow}>
                 <Text style={styles.mmLabel}>Lot Size</Text>
-                <Text style={styles.mmLotValue}>{lotSize.toFixed(2)}</Text>
+                <Text style={styles.mmLotValue}>{safeLotSize.toFixed(2)}</Text>
               </View>
               <View style={styles.mmRow}>
                 <Text style={styles.mmLabel}>Daily Target</Text>
-                <Text style={styles.mmTargetValue}>${dailyTarget.toFixed(2)}</Text>
+                <Text style={styles.mmTargetValue}>${safeDailyTarget.toFixed(2)}</Text>
               </View>
             </View>
 
@@ -128,7 +136,7 @@ const TradeModal: React.FC<TradeModalProps> = ({
                 color="#FFFFFF" 
               />
               <Text style={styles.executeButtonText}>
-                {tradeType} {lotSize.toFixed(2)} LOT @ ${price?.toFixed(2)}
+                {tradeType} {safeLotSize.toFixed(2)} LOT @ ${safePrice.toFixed(2)}
               </Text>
             </LinearGradient>
           </TouchableOpacity>

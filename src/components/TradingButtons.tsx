@@ -26,7 +26,16 @@ const TradingButtons: React.FC<TradingButtonsProps> = ({
   hasOpenOrder = false,
   recommendedLotSize = 0.01,
 }) => {
-  const targetReached = disabled && dailyProfit >= dailyTarget && dailyTarget > 0 && !hasOpenOrder;
+  // Safe number helper
+  const safeNumber = (val: any): number => (typeof val === 'number' && !isNaN(val) ? val : 0);
+  
+  const safeBidPrice = safeNumber(bidPrice);
+  const safeAskPrice = safeNumber(askPrice);
+  const safeDailyProfit = safeNumber(dailyProfit);
+  const safeDailyTarget = safeNumber(dailyTarget);
+  const safeLotSize = safeNumber(recommendedLotSize) || 0.01;
+  
+  const targetReached = disabled && safeDailyProfit >= safeDailyTarget && safeDailyTarget > 0 && !hasOpenOrder;
   const orderOpen = hasOpenOrder;
 
   return (
@@ -34,7 +43,7 @@ const TradingButtons: React.FC<TradingButtonsProps> = ({
       <View style={styles.titleRow}>
         <Text style={styles.sectionTitle}>Quick Trade</Text>
         <View style={styles.lotBadge}>
-          <Text style={styles.lotBadgeText}>Lot: {recommendedLotSize.toFixed(2)}</Text>
+          <Text style={styles.lotBadgeText}>Lot: {safeLotSize.toFixed(2)}</Text>
         </View>
       </View>
       
@@ -51,7 +60,7 @@ const TradingButtons: React.FC<TradingButtonsProps> = ({
             <View style={styles.targetReachedText}>
               <Text style={styles.targetReachedTitle}>🎉 Daily Target Reached!</Text>
               <Text style={styles.targetReachedSubtitle}>
-                Profit: ${dailyProfit.toFixed(2)} / Target: ${dailyTarget.toFixed(2)}
+                Profit: ${safeDailyProfit.toFixed(2)} / Target: ${safeDailyTarget.toFixed(2)}
               </Text>
               <Text style={styles.targetReachedMessage}>
                 Trading is paused. Come back tomorrow!
@@ -94,7 +103,7 @@ const TradingButtons: React.FC<TradingButtonsProps> = ({
                 <Ionicons name="arrow-down" size={20} color={disabled ? '#9CA3AF' : '#FFFFFF'} />
                 <Text style={[styles.buttonLabel, disabled && styles.disabledText]}>SELL</Text>
               </View>
-              <Text style={[styles.buttonPrice, disabled && styles.disabledText]}>{bidPrice.toFixed(2)}</Text>
+              <Text style={[styles.buttonPrice, disabled && styles.disabledText]}>{safeBidPrice.toFixed(2)}</Text>
               <Text style={[styles.buttonSubtext, disabled && styles.disabledSubtext]}>
                 {orderOpen ? 'Close Position First' : (disabled ? 'Trading Paused' : 'At Market Price')}
               </Text>
@@ -124,7 +133,7 @@ const TradingButtons: React.FC<TradingButtonsProps> = ({
                 <Ionicons name="arrow-up" size={20} color={disabled ? '#9CA3AF' : '#FFFFFF'} />
                 <Text style={[styles.buttonLabel, disabled && styles.disabledText]}>BUY</Text>
               </View>
-              <Text style={[styles.buttonPrice, disabled && styles.disabledText]}>{askPrice.toFixed(2)}</Text>
+              <Text style={[styles.buttonPrice, disabled && styles.disabledText]}>{safeAskPrice.toFixed(2)}</Text>
               <Text style={[styles.buttonSubtext, disabled && styles.disabledSubtext]}>
                 {orderOpen ? 'Close Position First' : (disabled ? 'Trading Paused' : 'At Market Price')}
               </Text>
