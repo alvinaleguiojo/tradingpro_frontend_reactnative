@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,13 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
+
+// Only import WebView for native platforms
+let WebView: any = null;
+if (Platform.OS !== 'web') {
+  WebView = require('react-native-webview').WebView;
+}
 
 interface VideoCallProps {
   visible: boolean;
@@ -35,6 +40,21 @@ const VideoCall: React.FC<VideoCallProps> = ({
   // Jitsi URL with config
   const jitsiUrl = `https://${jitsiServer}/${safeRoomName}#config.prejoinPageEnabled=false&config.disableDeepLinking=true&config.startWithAudioMuted=false&config.startWithVideoMuted=false&userInfo.displayName="${encodeURIComponent(displayName)}"`;
 
+  // For web, hide loading after a short delay since iframe doesn't have onLoad callback reliably
+  useEffect(() => {
+    if (Platform.OS === 'web' && visible) {
+      const timer = setTimeout(() => setIsLoading(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [visible]);
+
+  // Reset loading state when opening
+  useEffect(() => {
+    if (visible) {
+      setIsLoading(true);
+    }
+  }, [visible]);
+
   // Injected JS to customize Jitsi interface
   const injectedJS = `
     (function() {
@@ -50,6 +70,65 @@ const VideoCall: React.FC<VideoCallProps> = ({
 
   if (!visible) return null;
 
+  // Web version - use iframe
+  if (Platform.OS === 'web') {
+    return (
+      <Modal
+        visible={visible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={onClose}
+      >
+        <View style={styles.container}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <Ionicons name="videocam" size={22} color="#FFD700" />
+              <Text style={styles.headerTitle}>Video Call</Text>
+            </View>
+            <View style={styles.headerRight}>
+              <Text style={styles.roomText}>{safeRoomName}</Text>
+              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Loading Indicator */}
+          {isLoading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#FFD700" />
+              <Text style={styles.loadingText}>Connecting to video call...</Text>
+            </View>
+          )}
+
+          {/* Jitsi iframe for web */}
+          <iframe
+            src={jitsiUrl}
+            style={{
+              flex: 1,
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              backgroundColor: '#000',
+            }}
+            allow="camera; microphone; fullscreen; display-capture; autoplay"
+            onLoad={() => setIsLoading(false)}
+          />
+
+          {/* Bottom Controls */}
+          <View style={styles.bottomBar}>
+            <TouchableOpacity style={styles.endCallButton} onPress={onClose}>
+              <Ionicons name="call" size={24} color="#FFFFFF" />
+              <Text style={styles.endCallText}>Leave Call</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
+  // Mobile version - use WebView
   return (
     <Modal
       visible={visible}
@@ -80,24 +159,23 @@ const VideoCall: React.FC<VideoCallProps> = ({
           </View>
         )}
 
-        {/* Jitsi WebView */}
-        <WebView
-          source={{ uri: jitsiUrl }}
-          style={styles.webview}
-          onLoadEnd={() => setIsLoading(false)}
-          javaScriptEnabled={true}
-          domStorageEnabled={true}
-          allowsInlineMediaPlayback={true}
-          mediaPlaybackRequiresUserAction={false}
-          injectedJavaScript={injectedJS}
-          // Permissions for camera/mic
-          mediaCapturePermissionGrantType="grant"
-          allowsProtectedMedia={true}
-          // Android specific
-          mixedContentMode="always"
-          // iOS specific
-          allowsBackForwardNavigationGestures={false}
-        />
+        {/* Jitsi WebView for mobile */}
+        {WebView && (
+          <WebView
+            source={{ uri: jitsiUrl }}
+            style={styles.webview}
+            onLoadEnd={() => setIsLoading(false)}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            allowsInlineMediaPlayback={true}
+            mediaPlaybackRequiresUserAction={false}
+            injectedJavaScript={injectedJS}
+            mediaCapturePermissionGrantType="grant"
+            allowsProtectedMedia={true}
+            mixedContentMode="always"
+            allowsBackForwardNavigationGestures={false}
+          />
+        )}
 
         {/* Bottom Controls */}
         <View style={styles.bottomBar}>
