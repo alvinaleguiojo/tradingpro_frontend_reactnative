@@ -44,6 +44,52 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
 
   const safeNumber = (val: any): number => (typeof val === 'number' && !isNaN(val) ? val : 0);
 
+  /**
+   * Calculate potential profit/loss based on SL and TP
+   * For XAUUSD: 1 pip = $0.10 per 0.01 lot = $10 per 1.0 lot
+   */
+  const calculatePotentialPL = (
+    tradeType: 'BUY' | 'SELL' | undefined,
+    openPrice: number,
+    stopLoss: number,
+    takeProfit: number,
+    volume: number
+  ): { potentialLoss: number; potentialProfit: number } => {
+    if (!openPrice || !volume) {
+      return { potentialLoss: 0, potentialProfit: 0 };
+    }
+    
+    // For Gold (XAUUSD): $1 move = $100 per 1.0 lot, $1 per 0.01 lot
+    // So pip value = $10 per 1.0 lot per pip ($0.10 per 0.01 lot)
+    const dollarPerPoint = volume * 100; // $100 per point for 1.0 lot
+    
+    let potentialLoss = 0;
+    let potentialProfit = 0;
+    
+    if (tradeType === 'BUY') {
+      // BUY: Loss if price goes down to SL, Profit if price goes up to TP
+      if (stopLoss > 0) {
+        potentialLoss = (openPrice - stopLoss) * dollarPerPoint;
+      }
+      if (takeProfit > 0) {
+        potentialProfit = (takeProfit - openPrice) * dollarPerPoint;
+      }
+    } else if (tradeType === 'SELL') {
+      // SELL: Loss if price goes up to SL, Profit if price goes down to TP
+      if (stopLoss > 0) {
+        potentialLoss = (stopLoss - openPrice) * dollarPerPoint;
+      }
+      if (takeProfit > 0) {
+        potentialProfit = (openPrice - takeProfit) * dollarPerPoint;
+      }
+    }
+    
+    return { 
+      potentialLoss: Math.abs(potentialLoss), 
+      potentialProfit: Math.abs(potentialProfit) 
+    };
+  };
+
   const fetchAllData = useCallback(async () => {
     try {
       const items: HistoryItem[] = [];
@@ -406,7 +452,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
                   <Text style={styles.itemDetails}>
                     {safeNumber(item.volume).toFixed(2)} Lot @ {safeNumber(item.openPrice).toFixed(2)}
                   </Text>
-                  {/* SL/TP Display */}
+                  {/* SL/TP Display with Potential P/L */}
                   <View style={styles.slTpContainer}>
                     <Text style={[styles.slTpText, { color: '#EF4444' }]}>
                       SL: {item.stopLoss && item.stopLoss > 0 ? item.stopLoss.toFixed(2) : '--'}
@@ -421,6 +467,34 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
                       </TouchableOpacity>
                     )}
                   </View>
+                  {/* Potential Profit/Loss Display */}
+                  {item.status === 'OPEN' && (item.stopLoss || item.takeProfit) && (
+                    <View style={styles.potentialPlContainer}>
+                      {(() => {
+                        const { potentialLoss, potentialProfit } = calculatePotentialPL(
+                          item.tradeType,
+                          safeNumber(item.openPrice),
+                          safeNumber(item.stopLoss),
+                          safeNumber(item.takeProfit),
+                          safeNumber(item.volume)
+                        );
+                        return (
+                          <>
+                            {potentialLoss > 0 && (
+                              <Text style={styles.potentialLoss}>
+                                Risk: -${potentialLoss.toFixed(2)}
+                              </Text>
+                            )}
+                            {potentialProfit > 0 && (
+                              <Text style={styles.potentialProfit}>
+                                Target: +${potentialProfit.toFixed(2)}
+                              </Text>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </View>
+                  )}
                   <Text style={styles.itemTime}>{formatDate(item.time)}</Text>
                 </View>
               </View>
@@ -787,6 +861,31 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     padding: 4,
     backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    borderRadius: 4,
+  },
+  // Potential P/L Styles
+  potentialPlContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 10,
+  },
+  potentialLoss: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#EF4444',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  potentialProfit: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#10B981',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 4,
   },
   // Modal Styles
