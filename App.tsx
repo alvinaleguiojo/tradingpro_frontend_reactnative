@@ -466,13 +466,6 @@ export default function App(): React.JSX.Element {
     }
   };
 
-  // Handle logout
-  const handleLogout = async () => {
-    await backendApi.clearSession();
-    setIsLoggedIn(false);
-    setSessionId(null);
-  };
-
   // Show loading screen while checking saved session
   if (isLoading) {
     return (
