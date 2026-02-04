@@ -395,8 +395,10 @@ export const getOpenTrades = async (): Promise<Trade[]> => {
  * Get trade history (closed trades) from MT5
  */
 export const getTradeHistory = async (days: number = 30): Promise<any[]> => {
+  const userId = await getLoggedInAccountId();
+  const userParam = userId ? `&userId=${userId}` : '';
   const result = await backendFetch<{ success: boolean; data: any[]; count: number }>(
-    `/mt5/trade-history?days=${days}`
+    `/mt5/trade-history?days=${days}${userParam}`
   );
   return result.data || [];
 };
@@ -405,8 +407,10 @@ export const getTradeHistory = async (days: number = 30): Promise<any[]> => {
  * Get deals history (includes deposits/withdrawals) from MT5
  */
 export const getDealsHistory = async (days: number = 30): Promise<any[]> => {
+  const userId = await getLoggedInAccountId();
+  const userParam = userId ? `&userId=${userId}` : '';
   const result = await backendFetch<{ success: boolean; data: any[]; count: number }>(
-    `/mt5/deals?days=${days}`
+    `/mt5/deals?days=${days}${userParam}`
   );
   return result.data || [];
 };
