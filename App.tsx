@@ -131,21 +131,25 @@ export default function App(): React.JSX.Element {
     try {
       // Fetch both open and closed orders in parallel
       const [openOrders, closedOrders] = await Promise.all([
-        backendApi.getOpenedOrders(),
-        backendApi.getClosedOrders()
+        backendApi.getOpenedOrders().catch(() => []),
+        backendApi.getClosedOrders().catch(() => [])
       ]);
       
-      console.log('Fetched open orders:', openOrders.length);
-      console.log('Fetched closed orders:', closedOrders.length);
+      // Ensure we have arrays
+      const safeOpenOrders = Array.isArray(openOrders) ? openOrders : [];
+      const safeClosedOrders = Array.isArray(closedOrders) ? closedOrders : [];
+      
+      console.log('Fetched open orders:', safeOpenOrders.length);
+      console.log('Fetched closed orders:', safeClosedOrders.length);
       
       // Filter out non-trade operations (Balance, Credit, etc.) - only keep Buy/Sell trades
       const tradeOrderTypes = ['Buy', 'Sell', 'BuyLimit', 'SellLimit', 'BuyStop', 'SellStop', 'BuyStopLimit', 'SellStopLimit'];
       
-      const filteredOpenOrders = openOrders.filter(order => 
-        tradeOrderTypes.includes(order.orderType) && order.symbol && order.symbol.length > 0
+      const filteredOpenOrders = safeOpenOrders.filter(order => 
+        order && tradeOrderTypes.includes(order.orderType) && order.symbol && order.symbol.length > 0
       );
-      const filteredClosedOrders = closedOrders.filter(order => 
-        tradeOrderTypes.includes(order.orderType) && order.symbol && order.symbol.length > 0
+      const filteredClosedOrders = safeClosedOrders.filter(order => 
+        order && tradeOrderTypes.includes(order.orderType) && order.symbol && order.symbol.length > 0
       );
       
       const openTrades = filteredOpenOrders.map(convertOpenOrderToTrade);
@@ -155,7 +159,7 @@ export default function App(): React.JSX.Element {
       const todaysClosedTrades = closedTrades.filter(trade => 
         trade.closeTime && isToday(trade.closeTime)
       );
-      const todaysProfit = todaysClosedTrades.reduce((sum, trade) => sum + trade.profit, 0);
+      const todaysProfit = todaysClosedTrades.reduce((sum, trade) => sum + (trade.profit || 0), 0);
       setDailyRealizedProfit(todaysProfit);
       
       // Combine and sort by open time (most recent first)
