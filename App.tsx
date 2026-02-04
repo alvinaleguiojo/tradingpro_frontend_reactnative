@@ -16,6 +16,7 @@ import {
   MoneyManagement,
   AutoTradingScreen,
   TradingChart,
+  ChatPanel,
   useResponsive,
 } from './src/components';
 
@@ -492,9 +493,18 @@ export default function App(): React.JSX.Element {
         />
       </View>
 
-      {/* Right Panel - History */}
+      {/* Right Panel - Chat and History */}
       <View style={styles.desktopRightPanel}>
         <ScrollView showsVerticalScrollIndicator={false}>
+          {/* Community Chat Panel */}
+          <ChatPanel 
+            accountId={account.accountId}
+            username={account.name || `Trader${account.accountId.slice(-4)}`}
+            isVisible={true}
+          />
+          
+          <View style={{ height: 12 }} />
+          
           <TradeHistory 
             trades={tradeHistory} 
             currentPrice={priceData.bid} 
@@ -519,6 +529,14 @@ export default function App(): React.JSX.Element {
     <>
       {activeTab === 'auto' ? (
         <AutoTradingScreen onBack={() => setActiveTab('trade')} />
+      ) : activeTab === 'chat' ? (
+        <View style={styles.scrollView}>
+          <ChatPanel 
+            accountId={account.accountId}
+            username={account.name || `Trader${account.accountId.slice(-4)}`}
+            isVisible={true}
+          />
+        </View>
       ) : activeTab === 'history' ? (
         <ScrollView 
           style={styles.scrollView}

@@ -11,4 +11,5 @@ export { default as MoneyManagement } from './MoneyManagement';
 export { default as AutoTradingScreen } from './AutoTradingScreen';
 export { default as TradingChart } from './TradingChart';
 export { default as NotificationsPanel } from './NotificationsPanel';
+export { default as ChatPanel } from './ChatPanel';
 export { default as ResponsiveLayout, useResponsive } from './ResponsiveLayout';
