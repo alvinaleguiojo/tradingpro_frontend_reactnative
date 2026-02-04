@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import NotificationsPanel from './NotificationsPanel';
 
 interface HeaderProps {
   onLogout?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ onLogout }) => {
+  const [showNotifications, setShowNotifications] = useState(false);
+
   const handleLogoutPress = () => {
     if (Platform.OS === 'web') {
       // Use browser's native confirm dialog for web
@@ -41,7 +44,10 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
       
       {/* Right Actions */}
       <View style={styles.rightActions}>
-        <TouchableOpacity style={styles.notificationBtn}>
+        <TouchableOpacity 
+          style={styles.notificationBtn}
+          onPress={() => setShowNotifications(true)}
+        >
           <Ionicons name="notifications-outline" size={22} color="#9CA3AF" />
           <View style={styles.notificationBadge} />
         </TouchableOpacity>
@@ -50,6 +56,12 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
           <Ionicons name="log-out-outline" size={24} color="#EF4444" />
         </TouchableOpacity>
       </View>
+
+      {/* Notifications Panel */}
+      <NotificationsPanel 
+        visible={showNotifications} 
+        onClose={() => setShowNotifications(false)} 
+      />
     </View>
   );
 };
