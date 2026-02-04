@@ -156,17 +156,22 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
       // Try to fetch closed trades history
       try {
         const closedTrades = await getTradeHistory(90);
+        console.log('TradeHistory: Fetched closed trades:', closedTrades?.length);
         if (Array.isArray(closedTrades)) {
           closedTrades.forEach((trade: any) => {
             const existingIds = items.map(i => i.id);
-            const tradeId = trade.ticket || trade.order;
+            const tradeId = String(trade.ticket || trade.order);
             if (tradeId && !existingIds.includes(tradeId)) {
+              // Map MT5 orderType to BUY/SELL
+              const orderType = String(trade.orderType || trade.dealType || trade.type || '').toUpperCase();
+              const isBuy = orderType.includes('BUY') || orderType === '0';
+              
               items.push({
                 id: tradeId,
                 type: 'trade',
-                tradeType: trade.type?.includes('Buy') || trade.type === 'BUY' || trade.type === 0 ? 'BUY' : 'SELL',
+                tradeType: isBuy ? 'BUY' : 'SELL',
                 symbol: trade.symbol,
-                volume: safeNumber(trade.volume),
+                volume: safeNumber(trade.lots || trade.closeLots || trade.volume),
                 openPrice: safeNumber(trade.openPrice || trade.price),
                 closePrice: safeNumber(trade.closePrice),
                 profit: safeNumber(trade.profit),
@@ -176,9 +181,10 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
               });
             }
           });
+          console.log('TradeHistory: After adding closed trades, items:', items.length);
         }
       } catch (e) {
-        console.log('Could not fetch trade history from backend');
+        console.log('Could not fetch trade history from backend:', e);
       }
       
       // Try to fetch deals (deposits/withdrawals)
