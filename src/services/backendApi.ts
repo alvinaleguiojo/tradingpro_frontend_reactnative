@@ -985,6 +985,7 @@ export const getClosedOrders = async (days: number = 30): Promise<OpenOrder[]> =
  * Send order via backend
  */
 export const sendOrder = async (params: OrderSendParams): Promise<OpenOrder> => {
+  const userId = await getLoggedInAccountId();
   const result = await backendFetch<{ success: boolean; data: OpenOrder }>('/mt5/order/send', {
     method: 'POST',
     body: JSON.stringify({
@@ -994,6 +995,7 @@ export const sendOrder = async (params: OrderSendParams): Promise<OpenOrder> => 
       stopLoss: params.stoploss,
       takeProfit: params.takeprofit,
       comment: params.comment,
+      userId: userId,
     }),
   });
   return result.data;
@@ -1003,9 +1005,10 @@ export const sendOrder = async (params: OrderSendParams): Promise<OpenOrder> => 
  * Close order via backend
  */
 export const closeOrder = async (params: { ticket: number; lots?: number }): Promise<{ success: boolean }> => {
+  const userId = await getLoggedInAccountId();
   return backendFetch('/mt5/order/close', {
     method: 'POST',
-    body: JSON.stringify({ ticket: params.ticket.toString(), volume: params.lots }),
+    body: JSON.stringify({ ticket: params.ticket.toString(), volume: params.lots, userId: userId }),
   });
 };
 
