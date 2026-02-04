@@ -179,38 +179,30 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ accountId, username, isVisible = 
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Ionicons name="chatbubbles" size={20} color="#FFD700" />
-          <Text style={styles.headerTitle}>Community Chat</Text>
+      {/* Channel Tabs with Online Badge */}
+      <View style={styles.channelTabsRow}>
+        <View style={styles.channelTabs}>
+          {channels.map((ch) => (
+            <TouchableOpacity
+              key={ch.key}
+              style={[styles.channelTab, channel === ch.key && styles.channelTabActive]}
+              onPress={() => setChannel(ch.key)}
+            >
+              <Ionicons 
+                name={ch.icon as any} 
+                size={14} 
+                color={channel === ch.key ? '#000' : '#8E9BAE'} 
+              />
+              <Text style={[styles.channelTabText, channel === ch.key && styles.channelTabTextActive]}>
+                {ch.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
-        <View style={styles.headerRight}>
-          <View style={styles.onlineBadge}>
-            <View style={styles.onlineDot} />
-            <Text style={styles.onlineText}>{activeUsers} online</Text>
-          </View>
+        <View style={styles.onlineBadge}>
+          <View style={styles.onlineDot} />
+          <Text style={styles.onlineText}>{activeUsers} online</Text>
         </View>
-      </View>
-
-      {/* Channel Tabs */}
-      <View style={styles.channelTabs}>
-        {channels.map((ch) => (
-          <TouchableOpacity
-            key={ch.key}
-            style={[styles.channelTab, channel === ch.key && styles.channelTabActive]}
-            onPress={() => setChannel(ch.key)}
-          >
-            <Ionicons 
-              name={ch.icon as any} 
-              size={14} 
-              color={channel === ch.key ? '#000' : '#8E9BAE'} 
-            />
-            <Text style={[styles.channelTabText, channel === ch.key && styles.channelTabTextActive]}>
-              {ch.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
       </View>
 
       {/* Messages */}
@@ -296,34 +288,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ accountId, username, isVisible = 
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#1A2332',
-    borderRadius: 12,
+    borderRadius: 0,
     overflow: 'hidden',
     flex: 1,
-    minHeight: 300,
-    maxHeight: 400,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#3B4A5E',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginLeft: 8,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   onlineBadge: {
     flexDirection: 'row',
@@ -345,13 +312,18 @@ const styles = StyleSheet.create({
     color: '#10B981',
     fontWeight: '600',
   },
-  channelTabs: {
+  channelTabsRow: {
     flexDirection: 'row',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    gap: 6,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#2D3748',
+  },
+  channelTabs: {
+    flexDirection: 'row',
+    gap: 6,
   },
   channelTab: {
     flexDirection: 'row',

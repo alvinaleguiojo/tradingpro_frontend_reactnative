@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ScrollView, StatusBar, StyleSheet, Alert, Modal, View, Text, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
 import {
   Header,
@@ -65,6 +66,7 @@ export default function App(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TabType>('trade');
   const [isMoneyManagementVisible, setMoneyManagementVisible] = useState<boolean>(false);
   const [isChartVisible, setChartVisible] = useState<boolean>(false);
+  const [isChatVisible, setChatVisible] = useState<boolean>(false);
 
   // Responsive hook - must be called at top level, not after conditionals
   const { isDesktop } = useResponsive();
@@ -493,18 +495,9 @@ export default function App(): React.JSX.Element {
         />
       </View>
 
-      {/* Right Panel - Chat and History */}
+      {/* Right Panel - History */}
       <View style={styles.desktopRightPanel}>
         <ScrollView showsVerticalScrollIndicator={false}>
-          {/* Community Chat Panel */}
-          <ChatPanel 
-            accountId={account.accountId}
-            username={account.name || `Trader${account.accountId.slice(-4)}`}
-            isVisible={true}
-          />
-          
-          <View style={{ height: 12 }} />
-          
           <TradeHistory 
             trades={tradeHistory} 
             currentPrice={priceData.bid} 
@@ -512,6 +505,14 @@ export default function App(): React.JSX.Element {
           />
         </ScrollView>
       </View>
+
+      {/* Floating Chat Button */}
+      <TouchableOpacity 
+        style={styles.floatingChatButton}
+        onPress={() => setChatVisible(true)}
+      >
+        <Ionicons name="chatbubbles" size={24} color="#000" />
+      </TouchableOpacity>
 
       {/* Floating Auto Trading Button */}
       <TouchableOpacity 
@@ -529,14 +530,6 @@ export default function App(): React.JSX.Element {
     <>
       {activeTab === 'auto' ? (
         <AutoTradingScreen onBack={() => setActiveTab('trade')} />
-      ) : activeTab === 'chat' ? (
-        <View style={styles.scrollView}>
-          <ChatPanel 
-            accountId={account.accountId}
-            username={account.name || `Trader${account.accountId.slice(-4)}`}
-            isVisible={true}
-          />
-        </View>
       ) : activeTab === 'history' ? (
         <ScrollView 
           style={styles.scrollView}
@@ -640,6 +633,36 @@ export default function App(): React.JSX.Element {
             visible={isMoneyManagementVisible}
             onClose={() => setMoneyManagementVisible(false)}
           />
+
+          {/* Chat Modal */}
+          <Modal
+            visible={isChatVisible}
+            animationType="slide"
+            transparent={true}
+            onRequestClose={() => setChatVisible(false)}
+          >
+            <View style={styles.chatModalOverlay}>
+              <View style={styles.chatModalContainer}>
+                <View style={styles.chatModalHeader}>
+                  <View style={styles.chatModalHeaderLeft}>
+                    <Ionicons name="chatbubbles" size={20} color="#FFD700" />
+                    <Text style={styles.chatModalTitle}>Community Chat</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.chatCloseButton}
+                    onPress={() => setChatVisible(false)}
+                  >
+                    <Ionicons name="close" size={22} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+                <ChatPanel 
+                  accountId={account.accountId}
+                  username={account.name || `Trader${account.accountId.slice(-4)}`}
+                  isVisible={isChatVisible}
+                />
+              </View>
+            </View>
+          </Modal>
         </SafeAreaView>
       </LinearGradient>
     </SafeAreaProvider>
@@ -721,6 +744,67 @@ const styles = StyleSheet.create({
   },
   floatingAutoTradingIcon: {
     fontSize: 28,
+  },
+  floatingChatButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 100,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FFD700',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 1000,
+  },
+  chatModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  chatModalContainer: {
+    width: '100%',
+    maxWidth: 500,
+    height: '85%',
+    maxHeight: 700,
+    backgroundColor: '#1A2332',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  chatModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#0F172A',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  chatModalHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  chatModalTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  chatCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   chartModalContainer: {
     flex: 1,
