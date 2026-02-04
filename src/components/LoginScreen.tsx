@@ -4,6 +4,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   ActivityIndicator,
   Alert,
@@ -113,6 +114,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   };
 
   const handleLogin = async () => {
+    console.log('handleLogin called'); // Debug log
+    
     if (!accountNumber.trim()) {
       Alert.alert('Error', 'Please enter your account number');
       return;
@@ -122,16 +125,20 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       return;
     }
 
+    console.log('Connecting to:', selectedServer.host, selectedServer.port); // Debug log
     setIsLoading(true);
 
     try {
       // Connect via backend (saves credentials and connects to MT5)
+      console.log('Calling connectMt5...'); // Debug log
       const result = await connectMt5({
         user: parseInt(accountNumber, 10),
         password: password,
         host: selectedServer.host,
         port: selectedServer.port,
       });
+      
+      console.log('connectMt5 result:', result); // Debug log
 
       if (result.success && result.connected) {
         console.log('Connected to MT5 via backend');
@@ -140,6 +147,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         throw new Error(result.error || 'Connection failed');
       }
     } catch (error: any) {
+      console.error('Login error:', error); // Debug log
       Alert.alert(
         'Connection Failed',
         error.message || 'Unable to connect to the trading server. Please check your credentials and try again.'
@@ -344,11 +352,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             </View>
 
             {/* Login Button */}
-            <TouchableOpacity
+            <Pressable
               onPress={handleLogin}
               disabled={isLoading}
-              activeOpacity={0.8}
-              style={Platform.OS === 'web' ? { cursor: 'pointer' } : undefined}
+              style={({ pressed }) => [
+                { opacity: pressed ? 0.8 : 1 },
+                Platform.OS === 'web' ? { cursor: isLoading ? 'not-allowed' : 'pointer' } : {},
+              ]}
             >
               <LinearGradient
                 colors={['#00D4AA', '#00B894']}
@@ -365,7 +375,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                   </>
                 )}
               </LinearGradient>
-            </TouchableOpacity>
+            </Pressable>
 
             {/* Info */}
             <View style={styles.infoContainer}>
