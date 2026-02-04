@@ -1,6 +1,8 @@
 // Backend NestJS API Service
 import * as SecureStore from 'expo-secure-store';
-import { mt5Api } from './api';
+
+// Storage keys for local account info
+const LOGIN_CREDENTIALS_KEY = 'mt5_login_credentials';
 
 // Backend API base URL - update this to your computer's IP address
 // Use your local IP for physical device testing (e.g., http://192.168.1.4:4000)
@@ -22,6 +24,54 @@ export const getBackendUrl = async (): Promise<string> => {
 // Set the backend URL
 export const setBackendUrl = async (url: string): Promise<void> => {
   await SecureStore.setItemAsync(BACKEND_URL_KEY, url);
+};
+
+// Get locally stored account ID (from login)
+export const getLoggedInAccountId = async (): Promise<string | null> => {
+  try {
+    const credentialsStr = await SecureStore.getItemAsync(LOGIN_CREDENTIALS_KEY);
+    if (credentialsStr) {
+      const credentials = JSON.parse(credentialsStr);
+      return credentials.user?.toString() || null;
+    }
+    return null;
+  } catch (error) {
+    console.error('Failed to get logged in account ID:', error);
+    return null;
+  }
+};
+
+// Save login credentials locally
+export const saveLoginCredentials = async (credentials: {
+  user: number;
+  password: string;
+  host: string;
+  port: number;
+}): Promise<void> => {
+  await SecureStore.setItemAsync(LOGIN_CREDENTIALS_KEY, JSON.stringify(credentials));
+};
+
+// Clear login credentials
+export const clearLoginCredentials = async (): Promise<void> => {
+  await SecureStore.deleteItemAsync(LOGIN_CREDENTIALS_KEY);
+};
+
+// Get saved login credentials
+export const getSavedCredentials = async (): Promise<{
+  user: number;
+  password: string;
+  host: string;
+  port: number;
+} | null> => {
+  try {
+    const credentialsStr = await SecureStore.getItemAsync(LOGIN_CREDENTIALS_KEY);
+    if (credentialsStr) {
+      return JSON.parse(credentialsStr);
+    }
+    return null;
+  } catch {
+    return null;
+  }
 };
 
 // ================== TYPES ==================
@@ -267,7 +317,7 @@ export const analyzeMarket = async (
  * Get open trades
  */
 export const getOpenTrades = async (): Promise<Trade[]> => {
-  const accountId = await mt5Api.getLoggedInAccountId();
+  const accountId = await getLoggedInAccountId();
   const accountParam = accountId ? `?accountId=${accountId}` : '';
   const result = await backendFetch<{ success: boolean; data: Trade[]; count: number }>(`/trading/trades/open${accountParam}`);
   return result.data;
@@ -297,7 +347,7 @@ export const getDealsHistory = async (days: number = 30): Promise<any[]> => {
  * Get recent signals
  */
 export const getRecentSignals = async (limit: number = 20): Promise<TradingSignal[]> => {
-  const accountId = await mt5Api.getLoggedInAccountId();
+  const accountId = await getLoggedInAccountId();
   const accountParam = accountId ? `&accountId=${accountId}` : '';
   const result = await backendFetch<{ success: boolean; data: TradingSignal[]; count: number }>(
     `/trading/signals?limit=${limit}${accountParam}`
@@ -309,7 +359,7 @@ export const getRecentSignals = async (limit: number = 20): Promise<TradingSigna
  * Get trading logs
  */
 export const getTradingLogs = async (limit: number = 50): Promise<TradingLog[]> => {
-  const accountId = await mt5Api.getLoggedInAccountId();
+  const accountId = await getLoggedInAccountId();
   const accountParam = accountId ? `&accountId=${accountId}` : '';
   const result = await backendFetch<{ success: boolean; data: TradingLog[]; count: number }>(
     `/trading/logs?limit=${limit}${accountParam}`
@@ -321,7 +371,7 @@ export const getTradingLogs = async (limit: number = 50): Promise<TradingLog[]> 
  * Get trade statistics
  */
 export const getTradeStats = async (): Promise<TradeStats> => {
-  const accountId = await mt5Api.getLoggedInAccountId();
+  const accountId = await getLoggedInAccountId();
   const accountParam = accountId ? `?accountId=${accountId}` : '';
   const result = await backendFetch<{ success: boolean; data: TradeStats }>(`/trading/stats${accountParam}`);
   return result.data;
@@ -332,7 +382,7 @@ export const getTradeStats = async (): Promise<TradeStats> => {
  * This significantly reduces load times by combining 7+ API calls into 1
  */
 export const getDashboard = async (signalLimit: number = 10): Promise<DashboardData> => {
-  const accountId = await mt5Api.getLoggedInAccountId();
+  const accountId = await getLoggedInAccountId();
   const accountParam = accountId ? `&accountId=${accountId}` : '';
   const result = await backendFetch<DashboardResponse>(`/trading/dashboard?signalLimit=${signalLimit}${accountParam}`);
   return result.data;
@@ -408,7 +458,7 @@ export const getMoneyManagementLevels = async (): Promise<MoneyManagementLevel[]
  * Get money management status
  */
 export const getMoneyManagementStatus = async (accountId?: string): Promise<MoneyManagementStatus> => {
-  const effectiveAccountId = accountId || await mt5Api.getLoggedInAccountId();
+  const effectiveAccountId = accountId || await getLoggedInAccountId();
   const query = effectiveAccountId ? `?accountId=${effectiveAccountId}` : '';
   const result = await backendFetch<{ success: boolean; data: MoneyManagementStatus }>(
     `/money-management/status${query}`
@@ -445,7 +495,7 @@ export const getDailyProgress = async (accountId?: string): Promise<{
   progressPercent: number;
   targetReached: boolean;
 }> => {
-  const effectiveAccountId = accountId || await mt5Api.getLoggedInAccountId();
+  const effectiveAccountId = accountId || await getLoggedInAccountId();
   const query = effectiveAccountId ? `?accountId=${effectiveAccountId}` : '';
   const result = await backendFetch<{ success: boolean; data: any }>(
     `/money-management/daily-progress${query}`
@@ -460,7 +510,7 @@ export const shouldTrade = async (accountId?: string): Promise<{
   canTrade: boolean;
   reason: string | null;
 }> => {
-  const effectiveAccountId = accountId || await mt5Api.getLoggedInAccountId();
+  const effectiveAccountId = accountId || await getLoggedInAccountId();
   const query = effectiveAccountId ? `?accountId=${effectiveAccountId}` : '';
   const result = await backendFetch<{ success: boolean; data: any }>(
     `/money-management/should-trade${query}`
@@ -472,7 +522,7 @@ export const shouldTrade = async (accountId?: string): Promise<{
  * Sync account state with MT5
  */
 export const syncMoneyManagement = async (accountId?: string): Promise<AccountState> => {
-  const effectiveAccountId = accountId || await mt5Api.getLoggedInAccountId();
+  const effectiveAccountId = accountId || await getLoggedInAccountId();
   const result = await backendFetch<{ success: boolean; data: AccountState }>(
     '/money-management/sync',
     { 
@@ -646,3 +696,243 @@ export const testBackendConnection = async (): Promise<{
     };
   }
 };
+
+// ================== MT5 TRADING OPERATIONS (via Backend) ==================
+
+export interface BrokerServer {
+  label: string;
+  host: string;
+  port: number;
+}
+
+export interface BrokerSearchResult {
+  companyName: string;
+  results: {
+    name: string;
+    access: string[];
+  }[];
+}
+
+export interface Quote {
+  symbol: string;
+  bid: number;
+  ask: number;
+  time: string;
+  last?: number;
+  volume?: number;
+}
+
+export interface AccountSummary {
+  balance: number;
+  credit: number;
+  profit: number;
+  equity: number;
+  margin: number;
+  freeMargin: number;
+  marginLevel: number;
+  leverage: number;
+  currency: string;
+}
+
+export interface AccountDetails {
+  login: number;
+  type: string;
+  userName: string;
+  balance: number;
+  credit: number;
+  leverage: number;
+  country?: string;
+  email?: string;
+}
+
+export interface OpenOrder {
+  ticket: number;
+  symbol: string;
+  orderType: string;
+  lots: number;
+  openPrice: number;
+  stopLoss: number;
+  takeProfit: number;
+  profit: number;
+  swap: number;
+  commission: number;
+  openTime: string;
+  comment?: string;
+}
+
+export interface OrderSendParams {
+  symbol: string;
+  operation: 'Buy' | 'Sell' | 'BuyLimit' | 'SellLimit' | 'BuyStop' | 'SellStop';
+  volume: number;
+  price?: number;
+  slippage?: number;
+  stoploss?: number;
+  takeprofit?: number;
+  comment?: string;
+}
+
+/**
+ * Search for brokers by company name
+ */
+export const searchBrokers = async (companyName: string): Promise<BrokerSearchResult[]> => {
+  const result = await backendFetch<{ success: boolean; data: BrokerSearchResult[] }>(
+    `/mt5/brokers/search?company=${encodeURIComponent(companyName)}`
+  );
+  return result.data || [];
+};
+
+/**
+ * Parse broker search results into server list
+ */
+export const parseBrokerServers = (searchResults: BrokerSearchResult[]): BrokerServer[] => {
+  const servers: BrokerServer[] = [];
+  
+  searchResults.forEach((result) => {
+    result.results.forEach((serverAccess) => {
+      serverAccess.access.forEach((hostPort) => {
+        const [host, portStr] = hostPort.split(':');
+        const port = parseInt(portStr, 10);
+        
+        servers.push({
+          label: `${serverAccess.name} - ${host}`,
+          host: host,
+          port: port,
+        });
+      });
+    });
+  });
+  
+  return servers;
+};
+
+/**
+ * Connect to MT5 via backend
+ */
+export const connectMt5 = async (params: {
+  user: number;
+  password: string;
+  host: string;
+  port: number;
+}): Promise<{ success: boolean; connected: boolean; error?: string }> => {
+  // Save credentials locally
+  await saveLoginCredentials(params);
+  
+  // Send to backend
+  const result = await setMt5Credentials(
+    params.user.toString(),
+    params.password,
+    params.host,
+    params.port
+  );
+  
+  return result;
+};
+
+/**
+ * Restore session - check if already connected via backend
+ */
+export const restoreSession = async (): Promise<boolean> => {
+  try {
+    const saved = await getSavedCredentials();
+    if (!saved) return false;
+
+    // Check if backend is connected with our credentials
+    const status = await getMt5Status();
+    if (status.isConnected) {
+      return true;
+    }
+
+    // Try to reconnect with saved credentials
+    const result = await connectMt5(saved);
+    return result.connected;
+  } catch (error) {
+    console.error('Failed to restore session:', error);
+    return false;
+  }
+};
+
+/**
+ * Clear session and logout
+ */
+export const clearSession = async (): Promise<void> => {
+  await clearLoginCredentials();
+};
+
+/**
+ * Get account summary via backend
+ */
+export const getAccountSummary = async (): Promise<AccountSummary> => {
+  const result = await backendFetch<{ success: boolean; data: AccountSummary }>('/mt5/account');
+  return result.data;
+};
+
+/**
+ * Get account details via backend
+ */
+export const getAccountDetails = async (): Promise<AccountDetails> => {
+  const result = await backendFetch<{ success: boolean; data: AccountDetails }>('/mt5/account/details');
+  return result.data;
+};
+
+/**
+ * Get quote via backend
+ */
+export const getQuote = async (symbol: string = 'XAUUSDm'): Promise<Quote> => {
+  const result = await backendFetch<{ success: boolean; data: Quote }>(`/mt5/quote?symbol=${encodeURIComponent(symbol)}`);
+  return result.data;
+};
+
+/**
+ * Get opened orders via backend
+ */
+export const getOpenedOrders = async (): Promise<OpenOrder[]> => {
+  const result = await backendFetch<{ success: boolean; data: OpenOrder[] }>('/mt5/orders');
+  return result.data || [];
+};
+
+/**
+ * Get closed orders via backend
+ */
+export const getClosedOrders = async (days: number = 30): Promise<OpenOrder[]> => {
+  const result = await backendFetch<{ success: boolean; data: OpenOrder[]; count: number }>(`/mt5/orders/closed?days=${days}`);
+  return result.data || [];
+};
+
+/**
+ * Send order via backend
+ */
+export const sendOrder = async (params: OrderSendParams): Promise<OpenOrder> => {
+  const result = await backendFetch<{ success: boolean; data: OpenOrder }>('/mt5/order/send', {
+    method: 'POST',
+    body: JSON.stringify({
+      symbol: params.symbol,
+      type: params.operation === 'Buy' ? 'BUY' : 'SELL',
+      volume: params.volume,
+      stopLoss: params.stoploss,
+      takeProfit: params.takeprofit,
+      comment: params.comment,
+    }),
+  });
+  return result.data;
+};
+
+/**
+ * Close order via backend
+ */
+export const closeOrder = async (params: { ticket: number; lots?: number }): Promise<{ success: boolean }> => {
+  return backendFetch('/mt5/order/close', {
+    method: 'POST',
+    body: JSON.stringify({ ticket: params.ticket.toString(), volume: params.lots }),
+  });
+};
+
+/**
+ * Default broker servers
+ */
+export const BROKER_SERVERS: BrokerServer[] = [
+  {
+    label: 'Exness MT5 Trial 14',
+    host: '98.130.31.197',
+    port: 443,
+  },
+];

@@ -15,8 +15,13 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { BROKER_SERVERS, BrokerServer, mt5Api, searchBrokers, parseBrokerServers } from '../services/api';
-import { setMt5Credentials } from '../services/backendApi';
+import { 
+  BROKER_SERVERS, 
+  BrokerServer, 
+  searchBrokers, 
+  parseBrokerServers,
+  connectMt5,
+} from '../services/backendApi';
 
 interface LoginScreenProps {
   onLoginSuccess: (sessionId: string) => void;
@@ -120,32 +125,24 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     setIsLoading(true);
 
     try {
-      const sessionId = await mt5Api.connect({
+      // Connect via backend (saves credentials and connects to MT5)
+      const result = await connectMt5({
         user: parseInt(accountNumber, 10),
         password: password,
         host: selectedServer.host,
         port: selectedServer.port,
       });
 
-      // Sync credentials with backend for auto trading
-      try {
-        await setMt5Credentials(
-          accountNumber,
-          password,
-          selectedServer.host,
-          selectedServer.port
-        );
-        console.log('Backend MT5 credentials synced successfully');
-      } catch (backendError) {
-        console.warn('Failed to sync credentials with backend (auto trading may not work):', backendError);
-        // Don't fail login if backend sync fails
+      if (result.success && result.connected) {
+        console.log('Connected to MT5 via backend');
+        onLoginSuccess('backend-session');
+      } else {
+        throw new Error(result.error || 'Connection failed');
       }
-
-      onLoginSuccess(sessionId);
-    } catch (error) {
+    } catch (error: any) {
       Alert.alert(
         'Connection Failed',
-        'Unable to connect to the trading server. Please check your credentials and try again.'
+        error.message || 'Unable to connect to the trading server. Please check your credentials and try again.'
       );
     } finally {
       setIsLoading(false);

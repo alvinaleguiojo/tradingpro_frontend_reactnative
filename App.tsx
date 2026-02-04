@@ -23,7 +23,7 @@ import {
 
 import { mockAccountData, mockTradeHistory } from './src/data/mockData';
 import { Account, Trade, PriceData, TradeType, TabType } from './src/types';
-import { mt5Api, OpenOrder, Quote } from './src/services/api';
+import * as backendApi from './src/services/backendApi';
 import { getCurrentLevel, isDailyTargetReached } from './src/data/moneyManagement';
 import { useAppUpdate } from './src/hooks/useAppUpdate';
 
@@ -86,7 +86,7 @@ export default function App(): React.JSX.Element {
   };
 
   // Convert OpenOrder from API to Trade type for UI
-  const convertOpenOrderToTrade = (order: OpenOrder): Trade => {
+  const convertOpenOrderToTrade = (order: backendApi.OpenOrder): Trade => {
     // OpenedOrders endpoint returns active/open positions
     // The state can be: Started, Placed, Filled, Canceled, Rejected, Expired, PartialFill
     const isOpen = !order.closeTime || order.closePrice === 0 || 
@@ -109,7 +109,7 @@ export default function App(): React.JSX.Element {
   };
 
   // Convert closed order from API to Trade type (always CLOSED)
-  const convertClosedOrderToTrade = (order: OpenOrder): Trade => {
+  const convertClosedOrderToTrade = (order: backendApi.OpenOrder): Trade => {
     return {
       id: order.ticket.toString(),
       type: order.orderType === 'Buy' ? 'BUY' : 'SELL',
@@ -131,8 +131,8 @@ export default function App(): React.JSX.Element {
     try {
       // Fetch both open and closed orders in parallel
       const [openOrders, closedOrders] = await Promise.all([
-        mt5Api.getOpenedOrders(),
-        mt5Api.getClosedOrders()
+        backendApi.getOpenedOrders(),
+        backendApi.getClosedOrders()
       ]);
       
       console.log('Fetched open orders:', openOrders.length);
@@ -180,8 +180,8 @@ export default function App(): React.JSX.Element {
     try {
       // Fetch both account summary and details in parallel
       const [summary, details] = await Promise.all([
-        mt5Api.getAccountSummary(),
-        mt5Api.getAccountDetails()
+        backendApi.getAccountSummary(),
+        backendApi.getAccountDetails()
       ]);
       
       // Only update if we got valid data
@@ -210,20 +210,17 @@ export default function App(): React.JSX.Element {
   useEffect(() => {
     const checkSavedSession = async () => {
       try {
-        const restored = await mt5Api.restoreSession();
+        const restored = await backendApi.restoreSession();
         if (restored) {
-          const savedSessionId = mt5Api.getSessionId();
-          if (savedSessionId) {
-            setSessionId(savedSessionId);
-            setIsLoggedIn(true);
-            console.log('Session restored successfully');
-          }
+          setSessionId('backend-session');
+          setIsLoggedIn(true);
+          console.log('Session restored successfully');
         }
       } catch (error) {
         console.error('Failed to restore session:', error);
         // Clear any corrupted session data
         try {
-          await mt5Api.clearSavedSession();
+          await backendApi.clearSession();
         } catch (clearError) {
           console.error('Failed to clear session:', clearError);
         }
@@ -252,7 +249,7 @@ export default function App(): React.JSX.Element {
     // Fetch real-time price updates from MT5 API
     const fetchQuote = async () => {
       try {
-        const quote: Quote = await mt5Api.getQuote('XAUUSDm');
+        const quote = await backendApi.getQuote('XAUUSDm');
         
         setPriceData(prevData => {
           const change = quote.bid - (prevData.bid || quote.bid);
@@ -356,7 +353,7 @@ export default function App(): React.JSX.Element {
     try {
       // Send real order to MT5 API
       // Note: Symbol name may vary by broker (e.g., XAUUSDm, GOLD, XAUUSD.a)
-      const order = await mt5Api.sendOrder({
+      const order = await backendApi.sendOrder({
         symbol: priceData.symbol,
         operation: operation,
         volume: lotSize,
@@ -390,21 +387,23 @@ export default function App(): React.JSX.Element {
   // Handle closing a trade
   const handleCloseTrade = async (trade: Trade): Promise<void> => {
     try {
-      const result = await mt5Api.closeOrder({
+      const result = await backendApi.closeOrder({
         ticket: parseInt(trade.id),
-        slippage: 10,
-        comment: 'Closed via TradingPro Mobile',
       });
       
       console.log('Order closed:', result);
       
-      showAlert(
-        'Trade Closed',
-        `${trade.type} ${trade.lotSize} lot(s) of ${trade.symbol} closed\nProfit: ${result.profit >= 0 ? '+' : ''}$${result.profit.toFixed(2)}`
-      );
-      
-      // Refresh orders
-      fetchAllOrders();
+      if (result.success) {
+        showAlert(
+          'Trade Closed',
+          `${trade.type} ${trade.lotSize} lot(s) of ${trade.symbol} closed successfully`
+        );
+        
+        // Refresh orders
+        fetchAllOrders();
+      } else {
+        throw new Error('Failed to close order');
+      }
     } catch (error) {
       console.error('Failed to close trade:', error);
       showAlert(
@@ -416,7 +415,7 @@ export default function App(): React.JSX.Element {
 
   // Handle logout
   const handleLogout = async () => {
-    await mt5Api.clearSavedSession();
+    await backendApi.clearSession();
     setIsLoggedIn(false);
     setSessionId(null);
   };
