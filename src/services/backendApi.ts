@@ -1,5 +1,30 @@
 // Backend NestJS API Service
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+
+// Cross-platform storage wrapper (SecureStore for native, localStorage for web)
+const Storage = {
+  getItem: async (key: string): Promise<string | null> => {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem(key);
+    }
+    return SecureStore.getItemAsync(key);
+  },
+  setItem: async (key: string, value: string): Promise<void> => {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(key, value);
+      return;
+    }
+    return SecureStore.setItemAsync(key, value);
+  },
+  deleteItem: async (key: string): Promise<void> => {
+    if (Platform.OS === 'web') {
+      localStorage.removeItem(key);
+      return;
+    }
+    return SecureStore.deleteItemAsync(key);
+  },
+};
 
 // Storage keys for local account info
 const LOGIN_CREDENTIALS_KEY = 'mt5_login_credentials';
@@ -14,7 +39,7 @@ const BACKEND_URL_KEY = 'backend_api_url';
 // Get the configured backend URL
 export const getBackendUrl = async (): Promise<string> => {
   try {
-    const storedUrl = await SecureStore.getItemAsync(BACKEND_URL_KEY);
+    const storedUrl = await Storage.getItem(BACKEND_URL_KEY);
     return storedUrl || BACKEND_API_URL;
   } catch {
     return BACKEND_API_URL;
@@ -23,13 +48,13 @@ export const getBackendUrl = async (): Promise<string> => {
 
 // Set the backend URL
 export const setBackendUrl = async (url: string): Promise<void> => {
-  await SecureStore.setItemAsync(BACKEND_URL_KEY, url);
+  await Storage.setItem(BACKEND_URL_KEY, url);
 };
 
 // Get locally stored account ID (from login)
 export const getLoggedInAccountId = async (): Promise<string | null> => {
   try {
-    const credentialsStr = await SecureStore.getItemAsync(LOGIN_CREDENTIALS_KEY);
+    const credentialsStr = await Storage.getItem(LOGIN_CREDENTIALS_KEY);
     if (credentialsStr) {
       const credentials = JSON.parse(credentialsStr);
       return credentials.user?.toString() || null;
@@ -48,12 +73,12 @@ export const saveLoginCredentials = async (credentials: {
   host: string;
   port: number;
 }): Promise<void> => {
-  await SecureStore.setItemAsync(LOGIN_CREDENTIALS_KEY, JSON.stringify(credentials));
+  await Storage.setItem(LOGIN_CREDENTIALS_KEY, JSON.stringify(credentials));
 };
 
 // Clear login credentials
 export const clearLoginCredentials = async (): Promise<void> => {
-  await SecureStore.deleteItemAsync(LOGIN_CREDENTIALS_KEY);
+  await Storage.deleteItem(LOGIN_CREDENTIALS_KEY);
 };
 
 // Get saved login credentials
@@ -64,7 +89,7 @@ export const getSavedCredentials = async (): Promise<{
   port: number;
 } | null> => {
   try {
-    const credentialsStr = await SecureStore.getItemAsync(LOGIN_CREDENTIALS_KEY);
+    const credentialsStr = await Storage.getItem(LOGIN_CREDENTIALS_KEY);
     if (credentialsStr) {
       return JSON.parse(credentialsStr);
     }
