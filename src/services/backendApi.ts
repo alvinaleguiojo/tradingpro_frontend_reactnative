@@ -884,9 +884,27 @@ export const clearSession = async (): Promise<void> => {
 };
 
 /**
+ * Ensure we're connected with the correct account before making API calls
+ * This prevents issues when the shared backend switches to another user's account
+ */
+const ensureConnected = async (): Promise<void> => {
+  const saved = await getSavedCredentials();
+  if (saved) {
+    // Always re-send credentials to ensure we're using the right account
+    await setMt5Credentials(
+      saved.user.toString(),
+      saved.password,
+      saved.host,
+      saved.port
+    );
+  }
+};
+
+/**
  * Get account summary via backend
  */
 export const getAccountSummary = async (): Promise<AccountSummary> => {
+  await ensureConnected();
   const result = await backendFetch<{ success: boolean; data: AccountSummary }>('/mt5/account');
   return result.data;
 };
@@ -895,6 +913,7 @@ export const getAccountSummary = async (): Promise<AccountSummary> => {
  * Get account details via backend
  */
 export const getAccountDetails = async (): Promise<AccountDetails> => {
+  await ensureConnected();
   const result = await backendFetch<{ success: boolean; data: AccountDetails }>('/mt5/account/details');
   return result.data;
 };
@@ -903,6 +922,7 @@ export const getAccountDetails = async (): Promise<AccountDetails> => {
  * Get quote via backend
  */
 export const getQuote = async (symbol: string = 'XAUUSDm'): Promise<Quote> => {
+  await ensureConnected();
   const result = await backendFetch<{ success: boolean; data: Quote }>(`/mt5/quote?symbol=${encodeURIComponent(symbol)}`);
   return result.data;
 };
@@ -911,6 +931,7 @@ export const getQuote = async (symbol: string = 'XAUUSDm'): Promise<Quote> => {
  * Get opened orders via backend
  */
 export const getOpenedOrders = async (): Promise<OpenOrder[]> => {
+  await ensureConnected();
   const result = await backendFetch<{ success: boolean; data: OpenOrder[] }>('/mt5/orders');
   return result.data || [];
 };
@@ -919,6 +940,7 @@ export const getOpenedOrders = async (): Promise<OpenOrder[]> => {
  * Get closed orders via backend
  */
 export const getClosedOrders = async (days: number = 30): Promise<OpenOrder[]> => {
+  await ensureConnected();
   const result = await backendFetch<{ success: boolean; data: OpenOrder[]; count: number }>(`/mt5/orders/closed?days=${days}`);
   return result.data || [];
 };
@@ -927,6 +949,7 @@ export const getClosedOrders = async (days: number = 30): Promise<OpenOrder[]> =
  * Send order via backend
  */
 export const sendOrder = async (params: OrderSendParams): Promise<OpenOrder> => {
+  await ensureConnected();
   const result = await backendFetch<{ success: boolean; data: OpenOrder }>('/mt5/order/send', {
     method: 'POST',
     body: JSON.stringify({
@@ -945,6 +968,7 @@ export const sendOrder = async (params: OrderSendParams): Promise<OpenOrder> => 
  * Close order via backend
  */
 export const closeOrder = async (params: { ticket: number; lots?: number }): Promise<{ success: boolean }> => {
+  await ensureConnected();
   return backendFetch('/mt5/order/close', {
     method: 'POST',
     body: JSON.stringify({ ticket: params.ticket.toString(), volume: params.lots }),

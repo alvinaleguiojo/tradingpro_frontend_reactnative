@@ -182,7 +182,7 @@ export default function App(): React.JSX.Element {
   // Fetch account summary from API
   const fetchAccountSummary = async () => {
     try {
-      // Get the locally saved account ID
+      // Get the locally saved account ID - this is the source of truth
       const savedAccountId = await backendApi.getLoggedInAccountId();
       
       // Fetch both account summary and details in parallel
@@ -191,13 +191,14 @@ export default function App(): React.JSX.Element {
         backendApi.getAccountDetails().catch(() => null)
       ]);
       
+      console.log('Saved account ID:', savedAccountId);
       console.log('Account summary:', summary);
       console.log('Account details:', details);
       
-      // Build accountId from available sources
-      // Backend returns: accountNumber, name, serverName, company, currency
-      const accountId = details?.accountNumber?.toString() || 
-                        savedAccountId || 
+      // Use saved account ID as the primary identifier (from local storage)
+      // This won't change when other users connect to the shared backend
+      const accountId = savedAccountId || 
+                        details?.accountNumber?.toString() || 
                         sessionId || 
                         'MT5 Account';
       
