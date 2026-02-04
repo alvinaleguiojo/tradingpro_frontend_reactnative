@@ -530,6 +530,14 @@ export default function App(): React.JSX.Element {
     <>
       {activeTab === 'auto' ? (
         <AutoTradingScreen onBack={() => setActiveTab('trade')} />
+      ) : activeTab === 'chat' ? (
+        <View style={styles.chatFullScreen}>
+          <ChatPanel 
+            accountId={account.accountId}
+            username={account.name || `Trader${account.accountId.slice(-4)}`}
+            isVisible={true}
+          />
+        </View>
       ) : activeTab === 'history' ? (
         <ScrollView 
           style={styles.scrollView}
@@ -761,6 +769,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
     zIndex: 1000,
+  },
+  chatFullScreen: {
+    flex: 1,
+    backgroundColor: '#1A2332',
   },
   chatModalOverlay: {
     flex: 1,

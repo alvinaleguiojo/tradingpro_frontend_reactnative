@@ -19,7 +19,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabPress }) => {
     { id: 'trade', icon: 'trending-up', label: 'Trade' },
     { id: 'auto', icon: 'flash', label: 'Auto' },
     { id: 'history', icon: 'time-outline', label: 'History' },
-    { id: 'account', icon: 'wallet-outline', label: 'Account' },
+    { id: 'chat', icon: 'chatbubbles', label: 'Chat' },
     { id: 'settings', icon: 'settings-outline', label: 'Settings' },
   ];
 
