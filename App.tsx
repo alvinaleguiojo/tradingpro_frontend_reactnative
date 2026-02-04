@@ -3,6 +3,7 @@ import { ScrollView, StatusBar, StyleSheet, Alert, Modal, View, Text, TouchableO
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 
 import {
   Header,
@@ -718,6 +719,7 @@ export default function App(): React.JSX.Element {
           </Modal>
         </SafeAreaView>
       </LinearGradient>
+      <Toast />
     </SafeAreaProvider>
   );
 }

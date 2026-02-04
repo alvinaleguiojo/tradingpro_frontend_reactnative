@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { 
   BROKER_SERVERS, 
   BrokerServer, 
@@ -78,7 +79,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
   const handleCompanySearch = async () => {
     if (!companySearch.trim()) {
-      Alert.alert('Error', 'Please enter a company name to search');
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Please enter a company name to search',
+        position: 'top',
+        visibilityTime: 3000,
+      });
       return;
     }
 
@@ -88,7 +95,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       const results = await searchBrokers(companySearch);
       
       if (results.length === 0) {
-        Alert.alert('No Results', 'No servers found for this company. Please try a different name.');
+        Toast.show({
+          type: 'info',
+          text1: 'No Results',
+          text2: 'No servers found for this company. Please try a different name.',
+          position: 'top',
+          visibilityTime: 3000,
+        });
         return;
       }
 
@@ -99,15 +112,21 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         setSelectedServer(servers[0]);
       }
       
-      Alert.alert(
-        'Success',
-        `Found ${servers.length} server(s) for ${companySearch}. Please select one from the dropdown.`
-      );
+      Toast.show({
+        type: 'success',
+        text1: 'Servers Found',
+        text2: `Found ${servers.length} server(s) for ${companySearch}`,
+        position: 'top',
+        visibilityTime: 3000,
+      });
     } catch (error) {
-      Alert.alert(
-        'Search Failed',
-        'Unable to search for brokers. Please check your internet connection and try again.'
-      );
+      Toast.show({
+        type: 'error',
+        text1: 'Search Failed',
+        text2: 'Unable to search for brokers. Please check your internet connection.',
+        position: 'top',
+        visibilityTime: 4000,
+      });
     } finally {
       setIsSearching(false);
     }
@@ -117,11 +136,23 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     console.log('handleLogin called'); // Debug log
     
     if (!accountNumber.trim()) {
-      Alert.alert('Error', 'Please enter your account number');
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Please enter your account number',
+        position: 'top',
+        visibilityTime: 3000,
+      });
       return;
     }
     if (!password.trim()) {
-      Alert.alert('Error', 'Please enter your password');
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Please enter your password',
+        position: 'top',
+        visibilityTime: 3000,
+      });
       return;
     }
 
@@ -142,6 +173,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
       if (result.success && result.connected) {
         console.log('Connected to MT5 via backend');
+        Toast.show({
+          type: 'success',
+          text1: 'Connected!',
+          text2: 'Successfully connected to your trading account',
+          position: 'top',
+          visibilityTime: 3000,
+        });
         onLoginSuccess('backend-session');
       } else {
         // Extract error message from API response
@@ -159,14 +197,23 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           userMessage = 'Connection timed out. Please check your internet connection.';
         }
         
-        throw new Error(userMessage);
+        Toast.show({
+          type: 'error',
+          text1: 'Connection Failed',
+          text2: userMessage,
+          position: 'top',
+          visibilityTime: 4000,
+        });
       }
     } catch (error: any) {
       console.error('Login error:', error); // Debug log
-      Alert.alert(
-        'Connection Failed',
-        error.message || 'Unable to connect to the trading server. Please check your credentials and try again.'
-      );
+      Toast.show({
+        type: 'error',
+        text1: 'Connection Failed',
+        text2: error.message || 'Unable to connect to the trading server. Please check your credentials.',
+        position: 'top',
+        visibilityTime: 4000,
+      });
     } finally {
       setIsLoading(false);
     }
