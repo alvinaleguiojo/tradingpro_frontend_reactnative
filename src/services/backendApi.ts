@@ -935,7 +935,9 @@ export const clearSession = async (): Promise<void> => {
  * Get account summary via backend
  */
 export const getAccountSummary = async (): Promise<AccountSummary> => {
-  const result = await backendFetch<{ success: boolean; data: AccountSummary }>('/mt5/account');
+  const userId = await getLoggedInAccountId();
+  const userParam = userId ? `?userId=${userId}` : '';
+  const result = await backendFetch<{ success: boolean; data: AccountSummary }>(`/mt5/account${userParam}`);
   return result.data;
 };
 
@@ -943,7 +945,9 @@ export const getAccountSummary = async (): Promise<AccountSummary> => {
  * Get account details via backend
  */
 export const getAccountDetails = async (): Promise<AccountDetails> => {
-  const result = await backendFetch<{ success: boolean; data: AccountDetails }>('/mt5/account/details');
+  const userId = await getLoggedInAccountId();
+  const userParam = userId ? `?userId=${userId}` : '';
+  const result = await backendFetch<{ success: boolean; data: AccountDetails }>(`/mt5/account/details${userParam}`);
   return result.data;
 };
 
@@ -951,7 +955,9 @@ export const getAccountDetails = async (): Promise<AccountDetails> => {
  * Get quote via backend
  */
 export const getQuote = async (symbol: string = 'XAUUSDm'): Promise<Quote> => {
-  const result = await backendFetch<{ success: boolean; data: Quote }>(`/mt5/quote?symbol=${encodeURIComponent(symbol)}`);
+  const userId = await getLoggedInAccountId();
+  const userParam = userId ? `&userId=${userId}` : '';
+  const result = await backendFetch<{ success: boolean; data: Quote }>(`/mt5/quote?symbol=${encodeURIComponent(symbol)}${userParam}`);
   return result.data;
 };
 
@@ -959,7 +965,9 @@ export const getQuote = async (symbol: string = 'XAUUSDm'): Promise<Quote> => {
  * Get opened orders via backend
  */
 export const getOpenedOrders = async (): Promise<OpenOrder[]> => {
-  const result = await backendFetch<{ success: boolean; data: OpenOrder[] }>('/mt5/orders');
+  const userId = await getLoggedInAccountId();
+  const userParam = userId ? `?userId=${userId}` : '';
+  const result = await backendFetch<{ success: boolean; data: OpenOrder[] }>(`/mt5/orders${userParam}`);
   return result.data || [];
 };
 
@@ -967,7 +975,9 @@ export const getOpenedOrders = async (): Promise<OpenOrder[]> => {
  * Get closed orders via backend
  */
 export const getClosedOrders = async (days: number = 30): Promise<OpenOrder[]> => {
-  const result = await backendFetch<{ success: boolean; data: OpenOrder[]; count: number }>(`/mt5/orders/closed?days=${days}`);
+  const userId = await getLoggedInAccountId();
+  const userParam = userId ? `&userId=${userId}` : '';
+  const result = await backendFetch<{ success: boolean; data: OpenOrder[]; count: number }>(`/mt5/orders/closed?days=${days}${userParam}`);
   return result.data || [];
 };
 
