@@ -1,5 +1,6 @@
 // Backend NestJS API Service
 import * as SecureStore from 'expo-secure-store';
+import { mt5Api } from './api';
 
 // Backend API base URL - update this to your computer's IP address
 // Use your local IP for physical device testing (e.g., http://192.168.1.4:4000)
@@ -266,7 +267,9 @@ export const analyzeMarket = async (
  * Get open trades
  */
 export const getOpenTrades = async (): Promise<Trade[]> => {
-  const result = await backendFetch<{ success: boolean; data: Trade[]; count: number }>('/trading/trades/open');
+  const accountId = await mt5Api.getLoggedInAccountId();
+  const accountParam = accountId ? `?accountId=${accountId}` : '';
+  const result = await backendFetch<{ success: boolean; data: Trade[]; count: number }>(`/trading/trades/open${accountParam}`);
   return result.data;
 };
 
@@ -294,8 +297,10 @@ export const getDealsHistory = async (days: number = 30): Promise<any[]> => {
  * Get recent signals
  */
 export const getRecentSignals = async (limit: number = 20): Promise<TradingSignal[]> => {
+  const accountId = await mt5Api.getLoggedInAccountId();
+  const accountParam = accountId ? `&accountId=${accountId}` : '';
   const result = await backendFetch<{ success: boolean; data: TradingSignal[]; count: number }>(
-    `/trading/signals?limit=${limit}`
+    `/trading/signals?limit=${limit}${accountParam}`
   );
   return result.data;
 };
@@ -304,8 +309,10 @@ export const getRecentSignals = async (limit: number = 20): Promise<TradingSigna
  * Get trading logs
  */
 export const getTradingLogs = async (limit: number = 50): Promise<TradingLog[]> => {
+  const accountId = await mt5Api.getLoggedInAccountId();
+  const accountParam = accountId ? `&accountId=${accountId}` : '';
   const result = await backendFetch<{ success: boolean; data: TradingLog[]; count: number }>(
-    `/trading/logs?limit=${limit}`
+    `/trading/logs?limit=${limit}${accountParam}`
   );
   return result.data;
 };
@@ -314,7 +321,9 @@ export const getTradingLogs = async (limit: number = 50): Promise<TradingLog[]> 
  * Get trade statistics
  */
 export const getTradeStats = async (): Promise<TradeStats> => {
-  const result = await backendFetch<{ success: boolean; data: TradeStats }>('/trading/stats');
+  const accountId = await mt5Api.getLoggedInAccountId();
+  const accountParam = accountId ? `?accountId=${accountId}` : '';
+  const result = await backendFetch<{ success: boolean; data: TradeStats }>(`/trading/stats${accountParam}`);
   return result.data;
 };
 
@@ -323,7 +332,9 @@ export const getTradeStats = async (): Promise<TradeStats> => {
  * This significantly reduces load times by combining 7+ API calls into 1
  */
 export const getDashboard = async (signalLimit: number = 10): Promise<DashboardData> => {
-  const result = await backendFetch<DashboardResponse>(`/trading/dashboard?signalLimit=${signalLimit}`);
+  const accountId = await mt5Api.getLoggedInAccountId();
+  const accountParam = accountId ? `&accountId=${accountId}` : '';
+  const result = await backendFetch<DashboardResponse>(`/trading/dashboard?signalLimit=${signalLimit}${accountParam}`);
   return result.data;
 };
 
@@ -397,7 +408,8 @@ export const getMoneyManagementLevels = async (): Promise<MoneyManagementLevel[]
  * Get money management status
  */
 export const getMoneyManagementStatus = async (accountId?: string): Promise<MoneyManagementStatus> => {
-  const query = accountId ? `?accountId=${accountId}` : '';
+  const effectiveAccountId = accountId || await mt5Api.getLoggedInAccountId();
+  const query = effectiveAccountId ? `?accountId=${effectiveAccountId}` : '';
   const result = await backendFetch<{ success: boolean; data: MoneyManagementStatus }>(
     `/money-management/status${query}`
   );
@@ -433,7 +445,8 @@ export const getDailyProgress = async (accountId?: string): Promise<{
   progressPercent: number;
   targetReached: boolean;
 }> => {
-  const query = accountId ? `?accountId=${accountId}` : '';
+  const effectiveAccountId = accountId || await mt5Api.getLoggedInAccountId();
+  const query = effectiveAccountId ? `?accountId=${effectiveAccountId}` : '';
   const result = await backendFetch<{ success: boolean; data: any }>(
     `/money-management/daily-progress${query}`
   );
@@ -447,7 +460,8 @@ export const shouldTrade = async (accountId?: string): Promise<{
   canTrade: boolean;
   reason: string | null;
 }> => {
-  const query = accountId ? `?accountId=${accountId}` : '';
+  const effectiveAccountId = accountId || await mt5Api.getLoggedInAccountId();
+  const query = effectiveAccountId ? `?accountId=${effectiveAccountId}` : '';
   const result = await backendFetch<{ success: boolean; data: any }>(
     `/money-management/should-trade${query}`
   );
@@ -458,11 +472,12 @@ export const shouldTrade = async (accountId?: string): Promise<{
  * Sync account state with MT5
  */
 export const syncMoneyManagement = async (accountId?: string): Promise<AccountState> => {
+  const effectiveAccountId = accountId || await mt5Api.getLoggedInAccountId();
   const result = await backendFetch<{ success: boolean; data: AccountState }>(
     '/money-management/sync',
     { 
       method: 'POST',
-      body: JSON.stringify({ accountId }),
+      body: JSON.stringify({ accountId: effectiveAccountId }),
     }
   );
   return result.data;

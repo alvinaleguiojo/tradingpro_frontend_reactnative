@@ -274,6 +274,26 @@ export interface ApiErrorResponse {
 class MT5ApiService {
   private sessionId: string | null = null;
 
+  // Get session ID for external use
+  getSessionId(): string | null {
+    return this.sessionId;
+  }
+
+  // Get the currently logged in account ID (user number)
+  async getLoggedInAccountId(): Promise<string | null> {
+    try {
+      const credentialsStr = await Storage.getItemAsync(LOGIN_CREDENTIALS_KEY);
+      if (credentialsStr) {
+        const credentials = JSON.parse(credentialsStr) as ConnectParams;
+        return credentials.user?.toString() || null;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to get logged in account ID:', error);
+      return null;
+    }
+  }
+
   async connect(params: ConnectParams): Promise<string> {
     const url = `${API_BASE_URL}/Connect?user=${params.user}&password=${encodeURIComponent(params.password)}&host=${params.host}&port=${params.port}&connectTimeoutSeconds=30`;
     
