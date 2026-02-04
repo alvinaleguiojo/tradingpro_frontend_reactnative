@@ -881,22 +881,36 @@ export const restoreSession = async (): Promise<boolean> => {
  */
 export const clearSession = async (): Promise<void> => {
   await clearLoginCredentials();
+  lastEnsureConnectedTime = 0; // Reset so next session will reconnect
 };
+
+// Throttle ensureConnected to avoid flooding the backend
+let lastEnsureConnectedTime = 0;
+const ENSURE_CONNECTED_INTERVAL = 30000; // Only reconnect every 30 seconds max
 
 /**
  * Ensure we're connected with the correct account before making API calls
  * This prevents issues when the shared backend switches to another user's account
+ * Throttled to avoid excessive requests
  */
 const ensureConnected = async (): Promise<void> => {
+  const now = Date.now();
+  
+  // Skip if we recently ensured connection
+  if (now - lastEnsureConnectedTime < ENSURE_CONNECTED_INTERVAL) {
+    return;
+  }
+  
   const saved = await getSavedCredentials();
   if (saved) {
-    // Always re-send credentials to ensure we're using the right account
+    // Re-send credentials to ensure we're using the right account
     await setMt5Credentials(
       saved.user.toString(),
       saved.password,
       saved.host,
       saved.port
     );
+    lastEnsureConnectedTime = now;
   }
 };
 
