@@ -263,6 +263,38 @@ export interface DashboardResponse {
 
 // ================== API FUNCTIONS ==================
 
+// Auth error callback - will be set by App.tsx to handle logout
+let onAuthError: (() => void) | null = null;
+
+/**
+ * Set the callback to be called when authentication fails
+ */
+export const setAuthErrorCallback = (callback: () => void): void => {
+  onAuthError = callback;
+};
+
+/**
+ * Check if an error is an authentication error
+ */
+const isAuthError = (status: number, errorText: string): boolean => {
+  // 401 = Unauthorized, 403 = Forbidden
+  if (status === 401 || status === 403) return true;
+  
+  // Check for common auth-related error messages
+  const authErrorMessages = [
+    'invalid token',
+    'token expired',
+    'unauthorized',
+    'authentication failed',
+    'invalid credentials',
+    'not authenticated',
+    'session expired',
+  ];
+  
+  const lowerError = errorText.toLowerCase();
+  return authErrorMessages.some(msg => lowerError.includes(msg));
+};
+
 // Generic fetch wrapper
 const backendFetch = async <T>(
   endpoint: string,
@@ -281,6 +313,17 @@ const backendFetch = async <T>(
 
   if (!response.ok) {
     const errorText = await response.text();
+    
+    // Check if it's an auth error
+    if (isAuthError(response.status, errorText)) {
+      console.error('Authentication error detected:', errorText);
+      // Clear credentials and trigger logout
+      await clearLoginCredentials();
+      if (onAuthError) {
+        onAuthError();
+      }
+    }
+    
     throw new Error(`API Error: ${response.status} - ${errorText}`);
   }
 
@@ -839,16 +882,18 @@ export const connectMt5 = async (params: {
   host: string;
   port: number;
 }): Promise<{ success: boolean; connected: boolean; error?: string }> => {
-  // Save credentials locally
-  await saveLoginCredentials(params);
-  
-  // Send to backend
+  // Send to backend first to verify credentials
   const result = await setMt5Credentials(
     params.user.toString(),
     params.password,
     params.host,
     params.port
   );
+  
+  // Only save credentials locally if login succeeded
+  if (result.success && result.connected) {
+    await saveLoginCredentials(params);
+  }
   
   return result;
 };
@@ -861,17 +906,20 @@ export const restoreSession = async (): Promise<boolean> => {
     const saved = await getSavedCredentials();
     if (!saved) return false;
 
-    // Check if backend is connected with our credentials
-    const status = await getMt5Status();
-    if (status.isConnected) {
-      return true;
-    }
-
     // Try to reconnect with saved credentials
     const result = await connectMt5(saved);
-    return result.connected;
+    
+    // If connection failed, clear the saved credentials
+    if (!result.connected) {
+      console.log('Session restore failed - clearing credentials');
+      await clearLoginCredentials();
+      return false;
+    }
+    
+    return true;
   } catch (error) {
     console.error('Failed to restore session:', error);
+    await clearLoginCredentials();
     return false;
   }
 };
@@ -881,44 +929,12 @@ export const restoreSession = async (): Promise<boolean> => {
  */
 export const clearSession = async (): Promise<void> => {
   await clearLoginCredentials();
-  lastEnsureConnectedTime = 0; // Reset so next session will reconnect
-};
-
-// Throttle ensureConnected to avoid flooding the backend
-let lastEnsureConnectedTime = 0;
-const ENSURE_CONNECTED_INTERVAL = 30000; // Only reconnect every 30 seconds max
-
-/**
- * Ensure we're connected with the correct account before making API calls
- * This prevents issues when the shared backend switches to another user's account
- * Throttled to avoid excessive requests
- */
-const ensureConnected = async (): Promise<void> => {
-  const now = Date.now();
-  
-  // Skip if we recently ensured connection
-  if (now - lastEnsureConnectedTime < ENSURE_CONNECTED_INTERVAL) {
-    return;
-  }
-  
-  const saved = await getSavedCredentials();
-  if (saved) {
-    // Re-send credentials to ensure we're using the right account
-    await setMt5Credentials(
-      saved.user.toString(),
-      saved.password,
-      saved.host,
-      saved.port
-    );
-    lastEnsureConnectedTime = now;
-  }
 };
 
 /**
  * Get account summary via backend
  */
 export const getAccountSummary = async (): Promise<AccountSummary> => {
-  await ensureConnected();
   const result = await backendFetch<{ success: boolean; data: AccountSummary }>('/mt5/account');
   return result.data;
 };
@@ -927,7 +943,6 @@ export const getAccountSummary = async (): Promise<AccountSummary> => {
  * Get account details via backend
  */
 export const getAccountDetails = async (): Promise<AccountDetails> => {
-  await ensureConnected();
   const result = await backendFetch<{ success: boolean; data: AccountDetails }>('/mt5/account/details');
   return result.data;
 };
@@ -936,7 +951,6 @@ export const getAccountDetails = async (): Promise<AccountDetails> => {
  * Get quote via backend
  */
 export const getQuote = async (symbol: string = 'XAUUSDm'): Promise<Quote> => {
-  await ensureConnected();
   const result = await backendFetch<{ success: boolean; data: Quote }>(`/mt5/quote?symbol=${encodeURIComponent(symbol)}`);
   return result.data;
 };
@@ -945,7 +959,6 @@ export const getQuote = async (symbol: string = 'XAUUSDm'): Promise<Quote> => {
  * Get opened orders via backend
  */
 export const getOpenedOrders = async (): Promise<OpenOrder[]> => {
-  await ensureConnected();
   const result = await backendFetch<{ success: boolean; data: OpenOrder[] }>('/mt5/orders');
   return result.data || [];
 };
@@ -954,7 +967,6 @@ export const getOpenedOrders = async (): Promise<OpenOrder[]> => {
  * Get closed orders via backend
  */
 export const getClosedOrders = async (days: number = 30): Promise<OpenOrder[]> => {
-  await ensureConnected();
   const result = await backendFetch<{ success: boolean; data: OpenOrder[]; count: number }>(`/mt5/orders/closed?days=${days}`);
   return result.data || [];
 };
@@ -963,7 +975,6 @@ export const getClosedOrders = async (days: number = 30): Promise<OpenOrder[]> =
  * Send order via backend
  */
 export const sendOrder = async (params: OrderSendParams): Promise<OpenOrder> => {
-  await ensureConnected();
   const result = await backendFetch<{ success: boolean; data: OpenOrder }>('/mt5/order/send', {
     method: 'POST',
     body: JSON.stringify({
@@ -982,7 +993,6 @@ export const sendOrder = async (params: OrderSendParams): Promise<OpenOrder> => 
  * Close order via backend
  */
 export const closeOrder = async (params: { ticket: number; lots?: number }): Promise<{ success: boolean }> => {
-  await ensureConnected();
   return backendFetch('/mt5/order/close', {
     method: 'POST',
     body: JSON.stringify({ ticket: params.ticket.toString(), volume: params.lots }),

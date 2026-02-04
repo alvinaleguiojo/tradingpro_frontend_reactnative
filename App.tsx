@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ScrollView, StatusBar, StyleSheet, Alert, Modal, View, Text, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -73,6 +73,27 @@ export default function App(): React.JSX.Element {
 
   // Check for OTA updates automatically
   const { isChecking: isCheckingUpdate, isDownloading: isDownloadingUpdate } = useAppUpdate();
+
+  // Handle logout - clears state and redirects to login
+  const handleLogout = useCallback(() => {
+    console.log('Logging out...');
+    setIsLoggedIn(false);
+    setSessionId(null);
+    setAccount(mockAccountData);
+    setTradeHistory([]);
+    setDailyRealizedProfit(0);
+    setPriceData(defaultPriceData);
+    backendApi.clearSession();
+  }, []);
+
+  // Set up auth error callback on mount
+  useEffect(() => {
+    backendApi.setAuthErrorCallback(() => {
+      console.log('Auth error detected - logging out');
+      handleLogout();
+      showAlert('Session Expired', 'Your session has expired. Please log in again.');
+    });
+  }, [handleLogout]);
 
   // Helper to check if a date is today
   // Check if a date string is today (using UTC to match MT5 server time)
