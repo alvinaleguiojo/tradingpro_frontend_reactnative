@@ -11,9 +11,11 @@ import {
   Platform,
   Keyboard,
   TouchableWithoutFeedback,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getBackendUrl } from '../services/backendApi';
+import VideoCall from './VideoCall';
 
 interface ChatMessage {
   _id: string;
@@ -41,9 +43,47 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ accountId, username, isVisible = 
   const [isSending, setIsSending] = useState(false);
   const [activeUsers, setActiveUsers] = useState(0);
   const [channel, setChannel] = useState<'general' | 'signals' | 'help'>('general');
+  const [isVideoCallVisible, setVideoCallVisible] = useState(false);
+  const [videoRoomName, setVideoRoomName] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastMessageTimeRef = useRef<string | null>(null);
+
+  // Start video call for current channel
+  const startVideoCall = () => {
+    const roomName = `${channel}_${Date.now()}`;
+    setVideoRoomName(roomName);
+    setVideoCallVisible(true);
+    
+    // Post message to chat about the video call
+    sendVideoCallInvite(roomName);
+  };
+
+  // Join existing video call
+  const joinVideoCall = (roomName: string) => {
+    setVideoRoomName(roomName);
+    setVideoCallVisible(true);
+  };
+
+  // Send video call invite message
+  const sendVideoCallInvite = async (roomName: string) => {
+    try {
+      const baseUrl = await getBackendUrl();
+      await fetch(`${baseUrl}/chat/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountId,
+          username,
+          message: `📹 Started a video call! Join: ${roomName}`,
+          channel,
+          metadata: { isVideoCall: true, roomName },
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to send video invite:', error);
+    }
+  };
 
   // Scroll to bottom when keyboard shows
   useEffect(() => {
@@ -213,9 +253,14 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ accountId, username, isVisible = 
             </TouchableOpacity>
           ))}
         </View>
-        <View style={styles.onlineBadge}>
-          <View style={styles.onlineDot} />
-          <Text style={styles.onlineText}>{activeUsers} online</Text>
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.videoCallButton} onPress={startVideoCall}>
+            <Ionicons name="videocam" size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View style={styles.onlineBadge}>
+            <View style={styles.onlineDot} />
+            <Text style={styles.onlineText}>{activeUsers} online</Text>
+          </View>
         </View>
       </View>
 
@@ -243,6 +288,10 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ accountId, username, isVisible = 
           ) : (
             messages.map((msg) => {
               const isOwn = msg.accountId === accountId;
+              const isVideoCall = msg.message.includes('📹 Started a video call!');
+              const videoRoomMatch = msg.message.match(/Join: (.+)$/);
+              const callRoomName = videoRoomMatch ? videoRoomMatch[1] : '';
+              
               return (
                 <View
                   key={msg._id}
@@ -253,11 +302,20 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ accountId, username, isVisible = 
                       <Text style={styles.avatarText}>{msg.username.charAt(0).toUpperCase()}</Text>
                     </View>
                   )}
-                  <View style={[styles.messageBubble, isOwn && styles.messageBubbleOwn]}>
+                  <View style={[styles.messageBubble, isOwn && styles.messageBubbleOwn, isVideoCall && styles.videoCallBubble]}>
                     {!isOwn && <Text style={styles.messageUsername}>{msg.username}</Text>}
                     <Text style={[styles.messageText, isOwn && styles.messageTextOwn]}>
-                      {msg.message}
+                      {isVideoCall ? '📹 Started a video call!' : msg.message}
                     </Text>
+                    {isVideoCall && callRoomName && (
+                      <TouchableOpacity 
+                        style={styles.joinCallButton}
+                        onPress={() => joinVideoCall(callRoomName)}
+                      >
+                        <Ionicons name="videocam" size={14} color="#FFFFFF" />
+                        <Text style={styles.joinCallText}>Join Call</Text>
+                      </TouchableOpacity>
+                    )}
                     <Text style={[styles.messageTime, isOwn && styles.messageTimeOwn]}>
                       {formatTime(msg.createdAt)}
                     </Text>
@@ -294,6 +352,14 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ accountId, username, isVisible = 
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Video Call Modal */}
+      <VideoCall
+        visible={isVideoCallVisible}
+        roomName={videoRoomName}
+        displayName={username}
+        onClose={() => setVideoCallVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 };
@@ -324,6 +390,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#10B981',
     fontWeight: '600',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  videoCallButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#3B82F6',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   channelTabsRow: {
     flexDirection: 'row',
@@ -433,6 +512,27 @@ const styles = StyleSheet.create({
   },
   messageTextOwn: {
     color: '#FFFFFF',
+  },
+  videoCallBubble: {
+    backgroundColor: '#1E40AF',
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+  },
+  joinCallButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#10B981',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    marginTop: 8,
+    gap: 6,
+    alignSelf: 'flex-start',
+  },
+  joinCallText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
   messageTime: {
     fontSize: 9,
