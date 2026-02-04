@@ -44,16 +44,35 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ accountId, username, isVisible = 
   const [activeUsers, setActiveUsers] = useState(0);
   const [channel, setChannel] = useState<'general' | 'signals' | 'help'>('general');
   const [isVideoCallVisible, setVideoCallVisible] = useState(false);
+  const [isVideoMinimized, setVideoMinimized] = useState(false);
   const [videoRoomName, setVideoRoomName] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastMessageTimeRef = useRef<string | null>(null);
+
+  // Minimize video call (stays connected)
+  const minimizeVideoCall = () => {
+    setVideoMinimized(true);
+  };
+
+  // Restore minimized video call
+  const restoreVideoCall = () => {
+    setVideoMinimized(false);
+  };
+
+  // Close video call completely
+  const closeVideoCall = () => {
+    setVideoCallVisible(false);
+    setVideoMinimized(false);
+    setVideoRoomName('');
+  };
 
   // Start video call for current channel
   const startVideoCall = () => {
     const roomName = `${channel}_${Date.now()}`;
     setVideoRoomName(roomName);
     setVideoCallVisible(true);
+    setVideoMinimized(false);
     
     // Post message to chat about the video call
     sendVideoCallInvite(roomName);
@@ -63,6 +82,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ accountId, username, isVisible = 
   const joinVideoCall = (roomName: string) => {
     setVideoRoomName(roomName);
     setVideoCallVisible(true);
+    setVideoMinimized(false);
   };
 
   // Send video call invite message
@@ -358,8 +378,29 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ accountId, username, isVisible = 
         visible={isVideoCallVisible}
         roomName={videoRoomName}
         displayName={username}
-        onClose={() => setVideoCallVisible(false)}
+        onClose={closeVideoCall}
+        onMinimize={minimizeVideoCall}
+        isMinimized={isVideoMinimized}
       />
+
+      {/* Floating Minimized Call Indicator */}
+      {isVideoCallVisible && isVideoMinimized && (
+        <TouchableOpacity 
+          style={styles.minimizedCallIndicator} 
+          onPress={restoreVideoCall}
+          activeOpacity={0.8}
+        >
+          <View style={styles.minimizedCallPulse} />
+          <Ionicons name="videocam" size={20} color="#FFFFFF" />
+          <Text style={styles.minimizedCallText}>In Call</Text>
+          <TouchableOpacity 
+            style={styles.minimizedCallEndButton}
+            onPress={closeVideoCall}
+          >
+            <Ionicons name="close" size={16} color="#FFFFFF" />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
     </KeyboardAvoidingView>
   );
 };
@@ -572,6 +613,47 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.5,
+  },
+  minimizedCallIndicator: {
+    position: 'absolute',
+    bottom: 80,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#6366F1',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    gap: 8,
+  },
+  minimizedCallPulse: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 25,
+    backgroundColor: '#6366F1',
+    opacity: 0.5,
+  },
+  minimizedCallText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  minimizedCallEndButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
   },
 });
 

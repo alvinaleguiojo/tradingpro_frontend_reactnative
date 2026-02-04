@@ -21,6 +21,8 @@ interface VideoCallProps {
   roomName: string;
   displayName: string;
   onClose: () => void;
+  onMinimize?: () => void;
+  isMinimized?: boolean;
 }
 
 const VideoCall: React.FC<VideoCallProps> = ({
@@ -28,6 +30,8 @@ const VideoCall: React.FC<VideoCallProps> = ({
   roomName,
   displayName,
   onClose,
+  onMinimize,
+  isMinimized = false,
 }) => {
   const [isLoading, setIsLoading] = useState(true);
 
@@ -74,10 +78,10 @@ const VideoCall: React.FC<VideoCallProps> = ({
   if (Platform.OS === 'web') {
     return (
       <Modal
-        visible={visible}
+        visible={visible && !isMinimized}
         animationType="slide"
         transparent={true}
-        onRequestClose={onClose}
+        onRequestClose={onMinimize || onClose}
       >
         <View style={styles.container}>
           {/* Header */}
@@ -88,6 +92,11 @@ const VideoCall: React.FC<VideoCallProps> = ({
             </View>
             <View style={styles.headerRight}>
               <Text style={styles.roomText}>{safeRoomName}</Text>
+              {onMinimize && (
+                <TouchableOpacity style={styles.minimizeButton} onPress={onMinimize}>
+                  <Ionicons name="remove" size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+              )}
               <TouchableOpacity style={styles.closeButton} onPress={onClose}>
                 <Ionicons name="close" size={24} color="#FFFFFF" />
               </TouchableOpacity>
@@ -118,6 +127,12 @@ const VideoCall: React.FC<VideoCallProps> = ({
 
           {/* Bottom Controls */}
           <View style={styles.bottomBar}>
+            {onMinimize && (
+              <TouchableOpacity style={styles.minimizeCallButton} onPress={onMinimize}>
+                <Ionicons name="chevron-down" size={24} color="#FFFFFF" />
+                <Text style={styles.minimizeCallText}>Minimize</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={styles.endCallButton} onPress={onClose}>
               <Ionicons name="call" size={24} color="#FFFFFF" />
               <Text style={styles.endCallText}>Leave Call</Text>
@@ -131,10 +146,10 @@ const VideoCall: React.FC<VideoCallProps> = ({
   // Mobile version - use WebView
   return (
     <Modal
-      visible={visible}
+      visible={visible && !isMinimized}
       animationType="slide"
       presentationStyle="fullScreen"
-      onRequestClose={onClose}
+      onRequestClose={onMinimize || onClose}
     >
       <View style={styles.container}>
         {/* Header */}
@@ -145,6 +160,11 @@ const VideoCall: React.FC<VideoCallProps> = ({
           </View>
           <View style={styles.headerRight}>
             <Text style={styles.roomText}>{safeRoomName}</Text>
+            {onMinimize && (
+              <TouchableOpacity style={styles.minimizeButton} onPress={onMinimize}>
+                <Ionicons name="remove" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <Ionicons name="close" size={24} color="#FFFFFF" />
             </TouchableOpacity>
@@ -179,6 +199,12 @@ const VideoCall: React.FC<VideoCallProps> = ({
 
         {/* Bottom Controls */}
         <View style={styles.bottomBar}>
+          {onMinimize && (
+            <TouchableOpacity style={styles.minimizeCallButton} onPress={onMinimize}>
+              <Ionicons name="chevron-down" size={24} color="#FFFFFF" />
+              <Text style={styles.minimizeCallText}>Minimize</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.endCallButton} onPress={onClose}>
             <Ionicons name="call" size={24} color="#FFFFFF" />
             <Text style={styles.endCallText}>Leave Call</Text>
@@ -232,6 +258,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  minimizeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#0D1421',
@@ -255,6 +289,21 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingBottom: Platform.OS === 'ios' ? 34 : 16,
     backgroundColor: '#1A2332',
+    gap: 16,
+  },
+  minimizeCallButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#6366F1',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 30,
+    gap: 8,
+  },
+  minimizeCallText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   endCallButton: {
     flexDirection: 'row',
