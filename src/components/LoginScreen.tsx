@@ -348,6 +348,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               onPress={handleLogin}
               disabled={isLoading}
               activeOpacity={0.8}
+              style={Platform.OS === 'web' ? { cursor: 'pointer' } : undefined}
             >
               <LinearGradient
                 colors={['#00D4AA', '#00B894']}
@@ -391,6 +392,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     padding: 24,
+    ...(Platform.OS === 'web' ? { alignSelf: 'center', width: '100%', maxWidth: 420 } : {}),
   },
   logoContainer: {
     alignItems: 'center',
@@ -421,7 +423,7 @@ const styles = StyleSheet.create({
   formContainer: {
     backgroundColor: '#1E293B',
     borderRadius: 20,
-    padding: 24,
+    padding: Platform.OS === 'web' ? 20 : 24,
     borderWidth: 1,
     borderColor: '#3B4A5E',
   },
@@ -450,13 +452,13 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    padding: 14,
-    fontSize: 16,
+    padding: Platform.OS === 'web' ? 12 : 14,
+    fontSize: Platform.OS === 'web' ? 14 : 16,
     color: '#FFFFFF',
   },
   searchButton: {
-    width: 52,
-    height: 52,
+    width: Platform.OS === 'web' ? 44 : 52,
+    height: Platform.OS === 'web' ? 44 : 52,
     backgroundColor: '#00D4AA',
     borderRadius: 12,
     justifyContent: 'center',
@@ -472,13 +474,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   inputIconContainer: {
-    padding: 14,
+    padding: Platform.OS === 'web' ? 12 : 14,
     backgroundColor: 'rgba(0, 212, 170, 0.1)',
   },
   input: {
     flex: 1,
-    padding: 14,
-    fontSize: 16,
+    padding: Platform.OS === 'web' ? 12 : 14,
+    fontSize: Platform.OS === 'web' ? 14 : 16,
     color: '#FFFFFF',
   },
   eyeButton: {
@@ -499,8 +501,8 @@ const styles = StyleSheet.create({
   },
   serverText: {
     flex: 1,
-    padding: 14,
-    fontSize: 16,
+    padding: Platform.OS === 'web' ? 12 : 14,
+    fontSize: Platform.OS === 'web' ? 14 : 16,
     color: '#FFFFFF',
   },
   serverDropdown: {
@@ -602,7 +604,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+    padding: Platform.OS === 'web' ? 14 : 16,
     borderRadius: 12,
     marginTop: 8,
   },
