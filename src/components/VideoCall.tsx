@@ -31,14 +31,14 @@ const VideoCall: React.FC<VideoCallProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(true);
 
-  // Jitsi Meet - use 8x8.vc (allows anonymous meetings without login)
-  const jitsiServer = '8x8.vc';
+  // Use a public Jitsi server that allows anonymous meetings
+  const jitsiServer = 'meet.element.io';
   
   // Create safe room name (alphanumeric only)
   const safeRoomName = `TradingPro${roomName.replace(/[^a-zA-Z0-9]/g, '')}`;
   
-  // Jitsi URL with config - 8x8.vc format
-  const jitsiUrl = `https://${jitsiServer}/vpaas-magic-cookie-public/${safeRoomName}#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&config.disableDeepLinking=true&userInfo.displayName="${encodeURIComponent(displayName)}"`;
+  // Jitsi URL with config
+  const jitsiUrl = `https://${jitsiServer}/${safeRoomName}#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&config.disableDeepLinking=true&userInfo.displayName="${encodeURIComponent(displayName)}"`;
 
   // For web, hide loading after a short delay since iframe doesn't have onLoad callback reliably
   useEffect(() => {
