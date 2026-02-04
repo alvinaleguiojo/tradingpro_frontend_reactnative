@@ -191,7 +191,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ accountId, username, isVisible = 
     <KeyboardAvoidingView 
       style={styles.container}
       behavior="padding"
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 60}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 140}
     >
       {/* Channel Tabs with Online Badge */}
       <View style={styles.channelTabsRow}>
