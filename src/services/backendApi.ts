@@ -671,7 +671,7 @@ export const setMt5Credentials = async (
   password: string,
   host: string,
   port: number = 443
-): Promise<{ success: boolean; connected: boolean; accountInfo?: any; error?: string }> => {
+): Promise<{ success: boolean; connected: boolean; accountInfo?: any; error?: string; message?: string }> => {
   try {
     const baseUrl = await getBackendUrl();
     const response = await fetch(`${baseUrl}/mt5/set-credentials`, {
@@ -680,6 +680,10 @@ export const setMt5Credentials = async (
       body: JSON.stringify({ user, password, host, port }),
     });
     const data = await response.json();
+    // Normalize error/message field for consistent handling
+    if (!data.success && data.message && !data.error) {
+      data.error = data.message;
+    }
     return data;
   } catch (error: any) {
     return {

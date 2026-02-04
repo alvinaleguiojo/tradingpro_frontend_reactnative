@@ -144,7 +144,22 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         console.log('Connected to MT5 via backend');
         onLoginSuccess('backend-session');
       } else {
-        throw new Error(result.error || 'Connection failed');
+        // Extract error message from API response
+        const errorMsg = result.error || result.message || 'Connection failed';
+        
+        // Parse specific error types for user-friendly messages
+        let userMessage = errorMsg;
+        if (errorMsg.includes('INVALID_ACCOUNT')) {
+          userMessage = 'Invalid account number. Please check your account number and try again.';
+        } else if (errorMsg.includes('INVALID_PASSWORD') || errorMsg.includes('WRONG_PASSWORD')) {
+          userMessage = 'Invalid password. Please check your password and try again.';
+        } else if (errorMsg.includes('SERVER_UNAVAILABLE') || errorMsg.includes('NETWORK')) {
+          userMessage = 'Trading server is unavailable. Please try again later.';
+        } else if (errorMsg.includes('TIMEOUT')) {
+          userMessage = 'Connection timed out. Please check your internet connection.';
+        }
+        
+        throw new Error(userMessage);
       }
     } catch (error: any) {
       console.error('Login error:', error); // Debug log
