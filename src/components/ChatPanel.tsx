@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getBackendUrl } from '../services/backendApi';
@@ -42,6 +44,14 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ accountId, username, isVisible = 
   const scrollViewRef = useRef<ScrollView>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastMessageTimeRef = useRef<string | null>(null);
+
+  // Scroll to bottom when keyboard shows
+  useEffect(() => {
+    const keyboardDidShow = Keyboard.addListener('keyboardDidShow', () => {
+      setTimeout(() => scrollToBottom(), 100);
+    });
+    return () => keyboardDidShow.remove();
+  }, []);
 
   // Fetch messages
   const fetchMessages = useCallback(async (isInitial = false) => {
@@ -178,7 +188,11 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ accountId, username, isVisible = 
   if (!isVisible) return null;
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
       {/* Channel Tabs with Online Badge */}
       <View style={styles.channelTabsRow}>
         <View style={styles.channelTabs}>
@@ -217,6 +231,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ accountId, username, isVisible = 
           style={styles.messagesContainer}
           contentContainerStyle={styles.messagesContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          onContentSizeChange={() => scrollToBottom()}
         >
           {messages.length === 0 ? (
             <View style={styles.emptyState}>
@@ -253,35 +270,31 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ accountId, username, isVisible = 
       )}
 
       {/* Input */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={100}
-      >
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.textInput}
-            value={newMessage}
-            onChangeText={setNewMessage}
-            placeholder="Type a message..."
-            placeholderTextColor="#6B7280"
-            maxLength={500}
-            multiline
-            onSubmitEditing={sendMessage}
-          />
-          <TouchableOpacity
-            style={[styles.sendButton, (!newMessage.trim() || isSending) && styles.sendButtonDisabled]}
-            onPress={sendMessage}
-            disabled={!newMessage.trim() || isSending}
-          >
-            {isSending ? (
-              <ActivityIndicator size="small" color="#000" />
-            ) : (
-              <Ionicons name="send" size={18} color="#000" />
-            )}
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </View>
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.textInput}
+          value={newMessage}
+          onChangeText={setNewMessage}
+          placeholder="Type a message..."
+          placeholderTextColor="#6B7280"
+          maxLength={500}
+          multiline
+          onSubmitEditing={sendMessage}
+          blurOnSubmit={false}
+        />
+        <TouchableOpacity
+          style={[styles.sendButton, (!newMessage.trim() || isSending) && styles.sendButtonDisabled]}
+          onPress={sendMessage}
+          disabled={!newMessage.trim() || isSending}
+        >
+          {isSending ? (
+            <ActivityIndicator size="small" color="#000" />
+          ) : (
+            <Ionicons name="send" size={18} color="#000" />
+          )}
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
   );
 };
 
