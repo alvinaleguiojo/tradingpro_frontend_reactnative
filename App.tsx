@@ -182,26 +182,39 @@ export default function App(): React.JSX.Element {
   // Fetch account summary from API
   const fetchAccountSummary = async () => {
     try {
+      // Get the locally saved account ID
+      const savedAccountId = await backendApi.getLoggedInAccountId();
+      
       // Fetch both account summary and details in parallel
       const [summary, details] = await Promise.all([
-        backendApi.getAccountSummary(),
-        backendApi.getAccountDetails()
+        backendApi.getAccountSummary().catch(() => null),
+        backendApi.getAccountDetails().catch(() => null)
       ]);
       
-      // Only update if we got valid data
-      if (summary && details) {
+      console.log('Account summary:', summary);
+      console.log('Account details:', details);
+      
+      // Build accountId from available sources
+      // Backend returns: accountNumber, name, serverName, company, currency
+      const accountId = details?.accountNumber?.toString() || 
+                        savedAccountId || 
+                        sessionId || 
+                        'MT5 Account';
+      
+      // Only update if we got valid summary data
+      if (summary) {
         setAccount({
-          accountId: details.userName || `Account ${details.login}` || sessionId || 'MT5 Account',
-          name: details.userName || '',
-          accountType: details.type || '',
+          accountId: accountId,
+          name: details?.name || '',
+          accountType: details?.company ? 'Live' : '', // Infer from company presence
           balance: summary.balance || 0,
           equity: summary.equity || 0,
           profit: summary.profit || 0,
           margin: summary.margin || 0,
           freeMargin: summary.freeMargin || 0,
           marginLevel: summary.marginLevel || 0,
-          leverage: summary.leverage || details.leverage || 0,
-          currency: summary.currency || 'USD',
+          leverage: summary.leverage || 0,
+          currency: summary.currency || details?.currency || 'USD',
           openPositions: 0, // Will be updated when we add positions endpoint
         });
       }
