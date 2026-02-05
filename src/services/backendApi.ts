@@ -704,7 +704,19 @@ export const setMt5Credentials = async (
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user, password, host, port }),
     });
-    const data = await response.json();
+    let data: any = {};
+    try {
+      data = await response.json();
+    } catch (jsonErr) {
+      data = {};
+    }
+    // If not 2xx, treat as error
+    if (!response.ok) {
+      data.success = false;
+      data.connected = false;
+      data.error = data.message || `HTTP ${response.status}: ${response.statusText}`;
+      data.message = data.message || data.error;
+    }
     // Normalize error/message field for consistent handling
     if (!data.success && data.message && !data.error) {
       data.error = data.message;
@@ -715,6 +727,7 @@ export const setMt5Credentials = async (
       success: false,
       connected: false,
       error: error.message,
+      message: error.message,
     };
   }
 };
