@@ -184,6 +184,7 @@ export interface TradingSignal {
   takeProfit: number;
   reasoning: string;
   ictAnalysis: any;
+  aiAnalysis?: string; // JSON string with AI confirmation details
   createdAt: string;
 }
 

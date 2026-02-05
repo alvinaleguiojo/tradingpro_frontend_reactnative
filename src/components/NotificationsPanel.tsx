@@ -46,11 +46,28 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ visible, onClos
       if (Array.isArray(signals)) {
         signals.forEach((signal: TradingSignal) => {
           const icon = signal.signalType === 'BUY' ? '📈' : signal.signalType === 'SELL' ? '📉' : '⏸️';
+          
+          // Parse AI analysis if available
+          let aiInfo = '';
+          let isAiConfirmed = false;
+          try {
+            if (signal.aiAnalysis) {
+              const ai = typeof signal.aiAnalysis === 'string' ? JSON.parse(signal.aiAnalysis) : signal.aiAnalysis;
+              if (ai.aiConfirmed) {
+                isAiConfirmed = true;
+                aiInfo = ` | 🤖 AI: ${ai.aiConfidence}%`;
+              }
+            }
+          } catch (e) {
+            // Ignore parse errors
+          }
+          
+          const aiPrefix = isAiConfirmed ? '🤖 ' : '';
           notificationItems.push({
             id: `signal-${signal.id}`,
             type: 'signal',
-            title: `${icon} ${signal.signalType} Signal - ${signal.symbol}`,
-            message: `Confidence: ${signal.confidence}% | Entry: $${signal.entryPrice?.toFixed(2) || 'N/A'} | ${signal.strength}`,
+            title: `${aiPrefix}${icon} ${signal.signalType} Signal - ${signal.symbol}`,
+            message: `Confidence: ${signal.confidence}%${aiInfo} | Entry: $${signal.entryPrice?.toFixed(2) || 'N/A'} | ${signal.strength}\n${signal.reasoning || ''}`,
             time: signal.createdAt,
             data: signal,
           });
@@ -221,7 +238,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ visible, onClos
                       </View>
                       <View style={styles.notificationContent}>
                         <Text style={styles.notificationTitle}>{notification.title}</Text>
-                        <Text style={styles.notificationMessage} numberOfLines={2}>
+                        <Text style={styles.notificationMessage} numberOfLines={4}>
                           {notification.message}
                         </Text>
                         <Text style={styles.notificationTime}>{formatTime(notification.time)}</Text>
