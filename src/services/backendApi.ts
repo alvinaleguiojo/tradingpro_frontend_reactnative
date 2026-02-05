@@ -337,7 +337,9 @@ const backendFetch = async <T>(
  * Get auto trading status
  */
 export const getTradingStatus = async (): Promise<TradingStatus> => {
-  const result = await backendFetch<{ success: boolean; data: TradingStatus }>('/trading/status');
+  const userId = await getLoggedInAccountId();
+  const userParam = userId ? `?userId=${userId}` : '';
+  const result = await backendFetch<{ success: boolean; data: TradingStatus }>(`/trading/status${userParam}`);
   return result.data;
 };
 
@@ -345,28 +347,36 @@ export const getTradingStatus = async (): Promise<TradingStatus> => {
  * Enable auto trading
  */
 export const enableAutoTrading = async (): Promise<{ success: boolean; message: string; enabled: boolean }> => {
-  return backendFetch('/trading/enable', { method: 'POST' });
+  const userId = await getLoggedInAccountId();
+  const userParam = userId ? `?userId=${userId}` : '';
+  return backendFetch(`/trading/enable${userParam}`, { method: 'POST' });
 };
 
 /**
  * Disable auto trading
  */
 export const disableAutoTrading = async (): Promise<{ success: boolean; message: string; enabled: boolean }> => {
-  return backendFetch('/trading/disable', { method: 'POST' });
+  const userId = await getLoggedInAccountId();
+  const userParam = userId ? `?userId=${userId}` : '';
+  return backendFetch(`/trading/disable${userParam}`, { method: 'POST' });
 };
 
 /**
  * Toggle auto trading
  */
 export const toggleAutoTrading = async (): Promise<{ success: boolean; message: string; enabled: boolean }> => {
-  return backendFetch('/trading/toggle', { method: 'POST' });
+  const userId = await getLoggedInAccountId();
+  const userParam = userId ? `?userId=${userId}` : '';
+  return backendFetch(`/trading/toggle${userParam}`, { method: 'POST' });
 };
 
 /**
  * Manually trigger trading cycle
  */
 export const triggerTradingCycle = async (): Promise<{ success: boolean; message: string }> => {
-  return backendFetch('/trading/trigger', { method: 'POST' });
+  const userId = await getLoggedInAccountId();
+  const userParam = userId ? `?userId=${userId}` : '';
+  return backendFetch(`/trading/trigger${userParam}`, { method: 'POST' });
 };
 
 /**
@@ -465,7 +475,9 @@ export const getDashboard = async (signalLimit: number = 10): Promise<DashboardD
  * Sync trades with MT5
  */
 export const syncTrades = async (): Promise<{ success: boolean; message: string }> => {
-  return backendFetch('/trading/sync', { method: 'POST' });
+  const userId = await getLoggedInAccountId();
+  const userParam = userId ? `?userId=${userId}` : '';
+  return backendFetch(`/trading/sync${userParam}`, { method: 'POST' });
 };
 
 // ================== SCALPING MODE ENDPOINTS ==================
@@ -474,7 +486,9 @@ export const syncTrades = async (): Promise<{ success: boolean; message: string 
  * Get scalping mode status and configuration
  */
 export const getScalpingStatus = async (): Promise<ScalpingStatus> => {
-  const result = await backendFetch<{ success: boolean; data: ScalpingStatus }>('/trading/scalping/status');
+  const userId = await getLoggedInAccountId();
+  const userParam = userId ? `?userId=${userId}` : '';
+  const result = await backendFetch<{ success: boolean; data: ScalpingStatus }>(`/trading/scalping/status${userParam}`);
   return result.data;
 };
 
@@ -482,14 +496,18 @@ export const getScalpingStatus = async (): Promise<ScalpingStatus> => {
  * Enable aggressive scalping mode
  */
 export const enableScalpingMode = async (): Promise<{ success: boolean; message: string; data: any }> => {
-  return backendFetch('/trading/scalping/enable', { method: 'POST' });
+  const userId = await getLoggedInAccountId();
+  const userParam = userId ? `?userId=${userId}` : '';
+  return backendFetch(`/trading/scalping/enable${userParam}`, { method: 'POST' });
 };
 
 /**
  * Disable scalping mode (use standard ICT strategy)
  */
 export const disableScalpingMode = async (): Promise<{ success: boolean; message: string; data: any }> => {
-  return backendFetch('/trading/scalping/disable', { method: 'POST' });
+  const userId = await getLoggedInAccountId();
+  const userParam = userId ? `?userId=${userId}` : '';
+  return backendFetch(`/trading/scalping/disable${userParam}`, { method: 'POST' });
 };
 
 /**
@@ -509,7 +527,9 @@ export const toggleScalpingMode = async (): Promise<{ success: boolean; message:
  * Update scalping configuration
  */
 export const updateScalpingConfig = async (config: Partial<ScalpingConfig>): Promise<{ success: boolean; data: ScalpingConfig }> => {
-  return backendFetch('/trading/scalping/config', {
+  const userId = await getLoggedInAccountId();
+  const userParam = userId ? `?userId=${userId}` : '';
+  return backendFetch(`/trading/scalping/config${userParam}`, {
     method: 'POST',
     body: JSON.stringify(config),
   });
@@ -645,7 +665,9 @@ export const getMt5ConnectionStatus = async (): Promise<{
   balance: number | null;
   equity: number | null;
 }> => {
-  const result = await backendFetch<{ success: boolean; data: any }>('/mt5/status');
+  const userId = await getLoggedInAccountId();
+  const userParam = userId ? `?userId=${userId}` : '';
+  const result = await backendFetch<{ success: boolean; data: any }>(`/mt5/status${userParam}`);
   return result.data;
 };
 
@@ -658,7 +680,9 @@ export const getBackendQuote = async (symbol: string = 'XAUUSDm'): Promise<{
   ask: number;
   time: string;
 }> => {
-  const result = await backendFetch<{ success: boolean; data: any }>(`/mt5/quote?symbol=${symbol}`);
+  const userId = await getLoggedInAccountId();
+  const userParam = userId ? `&userId=${userId}` : '';
+  const result = await backendFetch<{ success: boolean; data: any }>(`/mt5/quote?symbol=${symbol}${userParam}`);
   return result.data;
 };
 
@@ -731,9 +755,10 @@ export const modifyOrder = async (
   stopLoss?: number,
   takeProfit?: number
 ): Promise<{ success: boolean }> => {
+  const userId = await getLoggedInAccountId();
   return backendFetch('/mt5/order/modify', {
     method: 'POST',
-    body: JSON.stringify({ ticket, stopLoss, takeProfit }),
+    body: JSON.stringify({ ticket, stopLoss, takeProfit, userId }),
   });
 };
 
