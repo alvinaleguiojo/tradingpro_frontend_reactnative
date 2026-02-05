@@ -259,14 +259,10 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'flex-end',
   },
   container: {
+    flex: 1,
     backgroundColor: '#1A2332',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-    minHeight: '50%',
   },
   header: {
     flexDirection: 'row',
