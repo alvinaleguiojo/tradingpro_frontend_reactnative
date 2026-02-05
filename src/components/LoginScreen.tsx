@@ -183,36 +183,60 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         onLoginSuccess('backend-session');
       } else {
         // Extract error message from API response
-        const errorMsg = result.error || result.message || 'Connection failed';
+        const errorMsg = result.message || result.error || 'Connection failed';
+        console.log('Connection failed with message:', errorMsg);
         
         // Parse specific error types for user-friendly messages
         let userMessage = errorMsg;
+        let errorTitle = 'Connection Failed';
+        
         if (errorMsg.includes('INVALID_ACCOUNT')) {
           userMessage = 'Invalid account number. Please check your account number and try again.';
         } else if (errorMsg.includes('INVALID_PASSWORD') || errorMsg.includes('WRONG_PASSWORD')) {
           userMessage = 'Invalid password. Please check your password and try again.';
         } else if (errorMsg.includes('SERVER_UNAVAILABLE') || errorMsg.includes('NETWORK')) {
           userMessage = 'Trading server is unavailable. Please try again later.';
-        } else if (errorMsg.includes('TIMEOUT')) {
+        } else if (errorMsg.includes('TIMEOUT') || errorMsg.includes('timeout')) {
           userMessage = 'Connection timed out. Please check your internet connection.';
+        } else if (errorMsg.includes('Server closed the socket') || errorMsg.includes('socket')) {
+          errorTitle = 'Server Connection Error';
+          userMessage = 'The trading server closed the connection. Please verify your account credentials and server selection.';
+        } else if (errorMsg.includes('Connection failed')) {
+          // Show the actual error from API for debugging
+          userMessage = errorMsg.length > 100 ? errorMsg.substring(0, 100) + '...' : errorMsg;
         }
         
         Toast.show({
           type: 'error',
-          text1: 'Connection Failed',
+          text1: errorTitle,
           text2: userMessage,
           position: 'top',
-          visibilityTime: 4000,
+          visibilityTime: 5000,
         });
       }
     } catch (error: any) {
       console.error('Login error:', error); // Debug log
+      
+      // Extract meaningful error message
+      let errorMessage = 'Unable to connect to the trading server.';
+      if (error.message) {
+        if (error.message.includes('Network request failed')) {
+          errorMessage = 'Network error. Please check your internet connection.';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'Connection timed out. Please try again.';
+        } else {
+          errorMessage = error.message.length > 100 
+            ? error.message.substring(0, 100) + '...' 
+            : error.message;
+        }
+      }
+      
       Toast.show({
         type: 'error',
         text1: 'Connection Failed',
-        text2: error.message || 'Unable to connect to the trading server. Please check your credentials.',
+        text2: errorMessage,
         position: 'top',
-        visibilityTime: 4000,
+        visibilityTime: 5000,
       });
     } finally {
       setIsLoading(false);
