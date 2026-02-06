@@ -192,7 +192,6 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
   const filters: { key: FilterType; label: string }[] = [
     { key: 'open', label: 'Open' },
     { key: 'closed', label: 'Closed' },
-    { key: 'deposits', label: 'Deposits' },
   ];
 
 
@@ -253,14 +252,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
         </View>
       </View>
 
-      {/* Deposits Summary (if deposits filter) */}
-      {filter === 'deposits' && (
-        <View style={styles.depositsSummary}>
-          <Ionicons name="wallet" size={20} color="#FFD700" />
-          <Text style={styles.depositsLabel}>Total Deposits:</Text>
-          <Text style={styles.depositsValue}>${totalDeposits.toFixed(2)}</Text>
-        </View>
-      )}
+      // ...existing code...
 
       {/* History List */}
       <ScrollView
@@ -451,7 +443,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
         {filteredItems.length === 0 && (
           <View style={styles.emptyState}>
             <Ionicons name="document-outline" size={48} color="#3B4A5E" />
-            <Text style={styles.emptyText}>No {filter === 'all' ? 'history' : filter} found</Text>
+            <Text style={styles.emptyText}>No history found</Text>
           </View>
         )}
         {/* Pagination: Load More Button */}
