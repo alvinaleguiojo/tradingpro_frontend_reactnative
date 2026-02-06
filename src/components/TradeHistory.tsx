@@ -37,7 +37,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
   const [totalDeposits, setTotalDeposits] = useState(0);
   // Pagination state
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(50);
+  const [pageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
