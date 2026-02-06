@@ -28,13 +28,19 @@ interface TradeHistoryProps {
   onCloseTrade?: (trade: Trade) => void;
 }
 
+
 const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, currentPrice, onCloseTrade }) => {
   const [filter, setFilter] = useState<FilterType>('open');
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [totalDeposits, setTotalDeposits] = useState(0);
-  
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(50);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
   // SL/TP Edit Modal State
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingTrade, setEditingTrade] = useState<HistoryItem | null>(null);
@@ -90,145 +96,59 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
     };
   };
 
-  const fetchAllData = useCallback(async () => {
+
+  // Fetch paginated trade history (closed trades)
+  const fetchTradeHistoryPage = useCallback(async (pageToFetch = 1, append = false) => {
     try {
-      const items: HistoryItem[] = [];
-      let deposits = 0;
-
-      // First, use props trades if available (these come from MT5 sync)
-      if (propTrades && Array.isArray(propTrades) && propTrades.length > 0) {
-        console.log('TradeHistory: Processing propTrades:', propTrades.length, propTrades);
-        propTrades.forEach((trade: any) => {
-          const tradeTypeStr = String(trade.type || '').toUpperCase();
-          const isBuy = tradeTypeStr.includes('BUY') || tradeTypeStr === '0';
-          const tradeStatus = String(trade.status || '').toUpperCase();
-          const isOpen = tradeStatus === 'OPEN';
-          
-          items.push({
-            id: trade.ticket || trade.id || `trade-${Math.random()}`,
-            type: 'trade',
-            tradeType: isBuy ? 'BUY' : 'SELL',
-            symbol: trade.symbol,
-            volume: safeNumber(trade.volume || trade.lotSize),
-            openPrice: safeNumber(trade.openPrice),
-            closePrice: safeNumber(trade.closePrice),
-            profit: safeNumber(trade.profit),
-            status: isOpen ? 'OPEN' : 'CLOSED',
-            time: trade.openTime || trade.closeTime || new Date().toISOString(),
-            comment: trade.comment,
-            stopLoss: safeNumber(trade.stopLoss),
-            takeProfit: safeNumber(trade.takeProfit),
-          });
-        });
-        console.log('TradeHistory: After propTrades mapping, items:', items.length);
-      }
-
-      // Try to fetch additional data from backend (open trades from MT5)
-      try {
-        const openTrades = await getOpenTrades();
-        if (Array.isArray(openTrades)) {
-          openTrades.forEach((trade: any) => {
-            // Avoid duplicates
-            const existingIds = items.map(i => i.id);
-            const tradeId = trade.ticket || trade.id;
-            if (tradeId && !existingIds.includes(tradeId)) {
-              items.push({
-                id: tradeId,
-                type: 'trade',
-                tradeType: trade.type?.includes('Buy') || trade.type === 'BUY' || trade.type === 0 ? 'BUY' : 'SELL',
-                symbol: trade.symbol,
-                volume: safeNumber(trade.volume || trade.lotSize),
-                openPrice: safeNumber(trade.openPrice),
-                profit: safeNumber(trade.profit),
-                status: 'OPEN',
-                time: trade.openTime || new Date().toISOString(),
-                comment: trade.comment,
-                stopLoss: safeNumber(trade.stopLoss),
-                takeProfit: safeNumber(trade.takeProfit),
-              });
-            }
-          });
-        }
-      } catch (e) {
-        console.log('Could not fetch open trades from backend');
-      }
-      
-      // Try to fetch closed trades history
-      try {
-        const closedTrades = await getTradeHistory(90);
-        console.log('TradeHistory: Fetched closed trades:', closedTrades?.length);
-        if (Array.isArray(closedTrades)) {
-          closedTrades.forEach((trade: any) => {
-            const existingIds = items.map(i => i.id);
-            const tradeId = String(trade.ticket || trade.order);
-            if (tradeId && !existingIds.includes(tradeId)) {
-              // Map MT5 orderType to BUY/SELL
-              const orderType = String(trade.orderType || trade.dealType || trade.type || '').toUpperCase();
-              const isBuy = orderType.includes('BUY') || orderType === '0';
-              
-              items.push({
-                id: tradeId,
-                type: 'trade',
-                tradeType: isBuy ? 'BUY' : 'SELL',
-                symbol: trade.symbol,
-                volume: safeNumber(trade.lots || trade.closeLots || trade.volume),
-                openPrice: safeNumber(trade.openPrice || trade.price),
-                closePrice: safeNumber(trade.closePrice),
-                profit: safeNumber(trade.profit),
-                status: 'CLOSED',
-                time: trade.closeTime || trade.time || new Date().toISOString(),
-                comment: trade.comment,
-              });
-            }
-          });
-          console.log('TradeHistory: After adding closed trades, items:', items.length);
-        }
-      } catch (e) {
-        console.log('Could not fetch trade history from backend:', e);
-      }
-      
-      // Try to fetch deals (deposits/withdrawals)
-      try {
-        const deals = await getDealsHistory(90);
-        if (Array.isArray(deals)) {
-          deals.forEach((deal: any) => {
-            const dealType = deal.type?.toString().toLowerCase() || '';
-            const entry = deal.entry?.toString().toLowerCase() || '';
-            const isBalanceOp = dealType.includes('balance') || entry === 'balance' || deal.symbol === '' || !deal.symbol;
-            
-            if (isBalanceOp && deal.profit !== 0) {
-              const isDeposit = safeNumber(deal.profit) > 0;
-              if (isDeposit) {
-                deposits += safeNumber(deal.profit);
-              }
-              items.push({
-                id: deal.ticket || deal.deal || `deal-${Math.random()}`,
-                type: isDeposit ? 'deposit' : 'withdrawal',
-                profit: safeNumber(deal.profit),
-                status: 'CLOSED',
-                time: deal.time || new Date().toISOString(),
-                comment: deal.comment || (isDeposit ? 'Deposit' : 'Withdrawal'),
-              });
-            }
-          });
-        }
-      } catch (e) {
-        console.log('Could not fetch deals from backend');
-      }
-      
-      setTotalDeposits(deposits);
-      
-      // Sort by time descending
-      items.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
-      
-      setHistoryItems(items);
+      if (pageToFetch === 1) setIsLoading(true);
+      else setIsLoadingMore(true);
+      const res = await getTradeHistory(90, pageToFetch, pageSize);
+      setTotalPages(res.totalPages || 1);
+      setPage(res.page || 1);
+      const mapped = (res.data || []).map((trade: any) => {
+        const orderType = String(trade.orderType || trade.dealType || trade.type || '').toUpperCase();
+        const isBuy = orderType.includes('BUY') || orderType === '0';
+        return {
+          id: String(trade.ticket || trade.order),
+          type: 'trade',
+          tradeType: isBuy ? 'BUY' : 'SELL',
+          symbol: trade.symbol,
+          volume: safeNumber(trade.lots || trade.closeLots || trade.volume),
+          openPrice: safeNumber(trade.openPrice || trade.price),
+          closePrice: safeNumber(trade.closePrice),
+          profit: safeNumber(trade.profit),
+          status: 'CLOSED',
+          time: trade.closeTime || trade.time || new Date().toISOString(),
+          comment: trade.comment,
+        };
+      });
+      setHistoryItems(prev => append ? [...prev, ...mapped] : mapped);
     } catch (error) {
-      console.error('Error fetching history:', error);
+      console.error('Error fetching paginated trade history:', error);
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
       setIsRefreshing(false);
     }
-  }, [propTrades]);
+  }, [pageSize]);
+
+  // Initial and refresh load
+  useEffect(() => {
+    fetchTradeHistoryPage(1, false);
+  }, [fetchTradeHistoryPage]);
+
+  // Load more handler
+  const handleLoadMore = () => {
+    if (page < totalPages && !isLoadingMore) {
+      fetchTradeHistoryPage(page + 1, true);
+    }
+  };
+
+  // Refresh handler
+  const onRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    fetchTradeHistoryPage(1, false);
+  }, [fetchTradeHistoryPage]);
 
   useEffect(() => {
     fetchAllData();
@@ -239,12 +159,11 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
     fetchAllData();
   }, [fetchAllData]);
 
+  // Only filter for open/closed if needed (pagination only for closed trades)
   const filteredItems = historyItems.filter(item => {
-    if (filter === 'all') return true;
-    if (filter === 'open') return item.type === 'trade' && item.status === 'OPEN';
-    if (filter === 'closed') return item.type === 'trade' && item.status === 'CLOSED';
-    if (filter === 'deposits') return item.type === 'deposit' || item.type === 'withdrawal';
-    return true;
+    if (filter === 'all' || filter === 'closed') return item.type === 'trade' && item.status === 'CLOSED';
+    // For open/deposits, fallback to old logic or show message
+    return false;
   });
 
   const formatDate = (dateString: string): string => {
@@ -282,6 +201,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
     { key: 'closed', label: 'Closed' },
     { key: 'deposits', label: 'Deposits' },
   ];
+
 
   if (isLoading) {
     return (
@@ -356,6 +276,17 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#FFD700" />
         }
         showsVerticalScrollIndicator={false}
+        onScroll={({ nativeEvent }) => {
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          if (
+            layoutMeasurement.height + contentOffset.y >= contentSize.height - 20 &&
+            !isLoadingMore &&
+            page < totalPages
+          ) {
+            handleLoadMore();
+          }
+        }}
+        scrollEventThrottle={400}
       >
         {filteredItems.map((item, index) => {
           const isProfit = item.profit >= 0;
@@ -529,6 +460,16 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
             <Ionicons name="document-outline" size={48} color="#3B4A5E" />
             <Text style={styles.emptyText}>No {filter === 'all' ? 'history' : filter} found</Text>
           </View>
+        )}
+        {/* Pagination: Load More Button */}
+        {page < totalPages && !isLoading && (
+          <TouchableOpacity style={{ padding: 16, alignItems: 'center' }} onPress={handleLoadMore} disabled={isLoadingMore}>
+            {isLoadingMore ? (
+              <ActivityIndicator size="small" color="#FFD700" />
+            ) : (
+              <Text style={{ color: '#FFD700', fontWeight: '600' }}>Load More</Text>
+            )}
+          </TouchableOpacity>
         )}
       </ScrollView>
 

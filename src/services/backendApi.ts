@@ -405,13 +405,27 @@ export const getOpenTrades = async (): Promise<Trade[]> => {
 /**
  * Get trade history (closed trades) from MT5
  */
-export const getTradeHistory = async (days: number = 30): Promise<any[]> => {
+export interface PaginatedResult<T> {
+  success: boolean;
+  data: T[];
+  count: number;
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export const getTradeHistory = async (
+  days: number = 30,
+  page: number = 1,
+  pageSize: number = 50
+): Promise<PaginatedResult<any>> => {
   const userId = await getLoggedInAccountId();
   const userParam = userId ? `&userId=${userId}` : '';
-  const result = await backendFetch<{ success: boolean; data: any[]; count: number }>(
-    `/mt5/trade-history?days=${days}${userParam}`
+  const result = await backendFetch<PaginatedResult<any>>(
+    `/mt5/trade-history?days=${days}${userParam}&page=${page}&pageSize=${pageSize}`
   );
-  return result.data || [];
+  return result;
 };
 
 /**
