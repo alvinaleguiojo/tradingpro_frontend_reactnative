@@ -455,7 +455,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
           </View>
         )}
         {/* Pagination: Load More Button */}
-        {page < totalPages && !isLoading && (
+        {page < totalPages && !isLoading && filteredItems.length > 0 && (
           <TouchableOpacity style={{ padding: 16, alignItems: 'center' }} onPress={handleLoadMore} disabled={isLoadingMore}>
             {isLoadingMore ? (
               <ActivityIndicator size="small" color="#FFD700" />
