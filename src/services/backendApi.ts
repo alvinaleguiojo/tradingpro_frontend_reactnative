@@ -410,6 +410,7 @@ export interface PaginatedResult<T> {
   data: T[];
   count: number;
   total: number;
+  totalProfit?: number;
   page: number;
   pageSize: number;
   totalPages: number;

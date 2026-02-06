@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, RefreshControl, ActivityIndicator, Modal, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Trade } from '../types';
-import { getOpenTrades, getTradeHistory, getDealsHistory, modifyOrder } from '../services/backendApi';
+import { getOpenTrades, getTradeHistory, modifyOrder } from '../services/backendApi';
 
 type FilterType = 'all' | 'open' | 'closed' | 'deposits';
 
@@ -40,6 +40,12 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
   const [pageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  // Backend-provided totals (across all pages, not just loaded items)
+  const [totalClosedCount, setTotalClosedCount] = useState(0);
+  const [totalProfitAll, setTotalProfitAll] = useState(0);
+  // Open trades state
+  const [openTradesItems, setOpenTradesItems] = useState<HistoryItem[]>([]);
+  const [isLoadingOpen, setIsLoadingOpen] = useState(false);
 
   // SL/TP Edit Modal State
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -105,19 +111,24 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
       const res = await getTradeHistory(90, pageToFetch, pageSize);
       setTotalPages(res.totalPages || 1);
       setPage(res.page || 1);
-      const mapped = (res.data || []).map((trade: any) => {
+      // Store backend-provided totals (across ALL trades, not just this page)
+      setTotalClosedCount(res.total || 0);
+      if (res.totalProfit !== undefined) {
+        setTotalProfitAll(res.totalProfit);
+      }
+      const mapped: HistoryItem[] = (res.data || []).map((trade: any) => {
         const orderType = String(trade.orderType || trade.dealType || trade.type || '').toUpperCase();
         const isBuy = orderType.includes('BUY') || orderType === '0';
         return {
           id: String(trade.ticket || trade.order),
-          type: 'trade',
-          tradeType: isBuy ? 'BUY' : 'SELL',
+          type: 'trade' as const,
+          tradeType: (isBuy ? 'BUY' : 'SELL') as 'BUY' | 'SELL',
           symbol: trade.symbol,
           volume: safeNumber(trade.lots || trade.closeLots || trade.volume),
           openPrice: safeNumber(trade.openPrice || trade.price),
           closePrice: safeNumber(trade.closePrice),
           profit: safeNumber(trade.profit),
-          status: 'CLOSED',
+          status: 'CLOSED' as const,
           time: trade.closeTime || trade.time || new Date().toISOString(),
           comment: trade.comment,
         };
@@ -132,10 +143,38 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
     }
   }, [pageSize]);
 
-  // Initial and refresh load
+  // Fetch open trades from backend
+  const fetchOpenTrades = useCallback(async () => {
+    setIsLoadingOpen(true);
+    try {
+      const trades = await getOpenTrades();
+      const mapped: HistoryItem[] = (trades || []).map((trade: any) => ({
+        id: String(trade.mt5Ticket || trade.id),
+        type: 'trade' as const,
+        tradeType: (trade.direction || 'BUY') as 'BUY' | 'SELL',
+        symbol: trade.symbol,
+        volume: safeNumber(trade.lotSize || trade.lots),
+        openPrice: safeNumber(trade.entryPrice || trade.openPrice),
+        closePrice: undefined,
+        profit: safeNumber(trade.profit),
+        status: 'OPEN' as const,
+        time: trade.openedAt || trade.openTime || new Date().toISOString(),
+        stopLoss: safeNumber(trade.stopLoss),
+        takeProfit: safeNumber(trade.takeProfit),
+      }));
+      setOpenTradesItems(mapped);
+    } catch (error) {
+      console.error('Error fetching open trades:', error);
+    } finally {
+      setIsLoadingOpen(false);
+    }
+  }, []);
+
+  // Initial load: fetch both closed and open trades
   useEffect(() => {
     fetchTradeHistoryPage(1, false);
-  }, [fetchTradeHistoryPage]);
+    fetchOpenTrades();
+  }, [fetchTradeHistoryPage, fetchOpenTrades]);
 
   // Load more handler
   const handleLoadMore = () => {
@@ -148,14 +187,11 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
     fetchTradeHistoryPage(1, false);
-  }, [fetchTradeHistoryPage]);
+    fetchOpenTrades();
+  }, [fetchTradeHistoryPage, fetchOpenTrades]);
 
-  // Only filter for open/closed if needed (pagination only for closed trades)
-  const filteredItems = historyItems.filter(item => {
-    if (filter === 'all' || filter === 'closed') return item.type === 'trade' && item.status === 'CLOSED';
-    // For open/deposits, fallback to old logic or show message
-    return false;
-  });
+  // Filter items based on selected tab
+  const filteredItems = filter === 'open' ? openTradesItems : historyItems;
 
   const formatDate = (dateString: string): string => {
     try {
@@ -171,21 +207,10 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
     }
   };
 
-  // Calculate summary stats
-  const allTrades = historyItems.filter(t => t.type === 'trade');
-  const openTradesCount = allTrades.filter(t => t.status === 'OPEN').length;
-  const closedTradesCount = allTrades.filter(t => t.status === 'CLOSED').length;
-  const totalProfit = allTrades.reduce((sum, t) => sum + t.profit, 0);
-  
-  // Debug logging
-  console.log('TradeHistory Stats:', {
-    historyItemsTotal: historyItems.length,
-    allTradesCount: allTrades.length,
-    openTradesCount,
-    closedTradesCount,
-    totalProfit,
-    sampleItems: historyItems.slice(0, 3).map(t => ({ type: t.type, status: t.status, profit: t.profit }))
-  });
+  // Summary stats: use backend totals for accuracy across all pages
+  const openTradesCount = openTradesItems.length;
+  const closedTradesCount = totalClosedCount;
+  const totalProfit = totalProfitAll;
 
   const filters: { key: FilterType; label: string }[] = [
     { key: 'open', label: 'Open' },
@@ -193,7 +218,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
   ];
 
 
-  if (isLoading) {
+  if (isLoading || (filter === 'open' && isLoadingOpen && openTradesItems.length === 0)) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#FFD700" />
@@ -442,8 +467,8 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
             <Text style={styles.emptyText}>No history found</Text>
           </View>
         )}
-        {/* Pagination: Load More Button */}
-        {page < totalPages && !isLoading && filteredItems.length > 0 && (
+        {/* Pagination: Load More Button (only for closed trades tab) */}
+        {filter === 'closed' && page < totalPages && !isLoading && filteredItems.length > 0 && (
           <TouchableOpacity style={{ padding: 16, alignItems: 'center' }} onPress={handleLoadMore} disabled={isLoadingMore}>
             {isLoadingMore ? (
               <ActivityIndicator size="small" color="#FFD700" />
@@ -523,7 +548,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
                       Alert.alert('Success', 'SL/TP updated successfully');
                       setEditModalVisible(false);
                       // Refresh data
-                      fetchAllData();
+                      fetchOpenTrades();
                     } else {
                       Alert.alert('Error', 'Failed to update SL/TP');
                     }
