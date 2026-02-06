@@ -150,8 +150,6 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
     fetchTradeHistoryPage(1, false);
   }, [fetchTradeHistoryPage]);
 
-  // ...existing code...
-
   // Only filter for open/closed if needed (pagination only for closed trades)
   const filteredItems = historyItems.filter(item => {
     if (filter === 'all' || filter === 'closed') return item.type === 'trade' && item.status === 'CLOSED';
@@ -251,8 +249,6 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
           </Text>
         </View>
       </View>
-
-      // ...existing code...
 
       {/* History List */}
       <ScrollView
