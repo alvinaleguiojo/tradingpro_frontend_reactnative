@@ -150,14 +150,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
     fetchTradeHistoryPage(1, false);
   }, [fetchTradeHistoryPage]);
 
-  useEffect(() => {
-    fetchAllData();
-  }, [fetchAllData, propTrades]);
-
-  const onRefresh = useCallback(() => {
-    setIsRefreshing(true);
-    fetchAllData();
-  }, [fetchAllData]);
+  // ...existing code...
 
   // Only filter for open/closed if needed (pagination only for closed trades)
   const filteredItems = historyItems.filter(item => {
