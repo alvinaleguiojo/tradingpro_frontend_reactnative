@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:trading-strategies.academy)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:scribehow.com)",
+      "WebFetch(domain:exstrade.pk)"
+    ]
+  }
+}

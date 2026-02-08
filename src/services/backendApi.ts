@@ -1074,6 +1074,152 @@ export const closeOrder = async (params: { ticket: number; lots?: number }): Pro
   });
 };
 
+// ================== EA BRIDGE ENDPOINTS ==================
+
+export interface EaSession {
+  accountId: string;
+  symbol: string;
+  lastSyncAt: string;
+  isOnline: boolean;
+  accountInfo: {
+    balance: number;
+    equity: number;
+    freeMargin: number;
+    margin: number;
+    leverage: number;
+    currency: string;
+  };
+  openPositions: Array<{
+    ticket: string;
+    symbol: string;
+    type: string;
+    volume: number;
+    openPrice: number;
+    stopLoss: number;
+    takeProfit: number;
+    profit: number;
+    openTime: string;
+  }>;
+  lastQuote: {
+    bid: number;
+    ask: number;
+    time: string;
+  };
+  eaVersion: string;
+}
+
+export interface EaCommandResult {
+  id: string;
+  accountId: string;
+  type: 'BUY' | 'SELL' | 'CLOSE' | 'MODIFY';
+  symbol: string;
+  volume: number;
+  stopLoss: number;
+  takeProfit: number;
+  ticket: string;
+  source: 'AUTO' | 'MANUAL';
+  status: 'PENDING' | 'SENT' | 'EXECUTED' | 'FAILED' | 'EXPIRED';
+  result?: {
+    ticket: string;
+    price: number;
+    error: string;
+  };
+  createdAt: string;
+  executedAt?: string;
+}
+
+/**
+ * Get all EA sessions (online EAs)
+ */
+export const getEaSessions = async (onlineOnly: boolean = false): Promise<EaSession[]> => {
+  const param = onlineOnly ? '?onlineOnly=true' : '';
+  const result = await backendFetch<{ sessions: EaSession[] }>(`/ea/sessions${param}`);
+  return result.sessions || [];
+};
+
+/**
+ * Get EA session for a specific account
+ */
+export const getEaSession = async (accountId: string): Promise<EaSession | null> => {
+  try {
+    const result = await backendFetch<{ session: EaSession }>(`/ea/session/${accountId}`);
+    return result.session || null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Send a manual trade command via EA bridge
+ */
+export const sendEaCommand = async (params: {
+  accountId: string;
+  type: 'BUY' | 'SELL' | 'CLOSE' | 'MODIFY';
+  symbol: string;
+  volume?: number;
+  stopLoss?: number;
+  takeProfit?: number;
+  ticket?: string;
+  comment?: string;
+}): Promise<{ commandId: string; status: string }> => {
+  const result = await backendFetch<{ command: EaCommandResult }>('/ea/command/send', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
+  return {
+    commandId: result.command?.id || '',
+    status: result.command?.status || 'PENDING',
+  };
+};
+
+/**
+ * Get EA command status (poll for execution result)
+ */
+export const getEaCommandStatus = async (commandId: string): Promise<EaCommandResult | null> => {
+  try {
+    const result = await backendFetch<{ command: EaCommandResult }>(`/ea/commands/${commandId}`);
+    return result.command || null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Get recent EA commands for an account
+ */
+export const getEaCommands = async (accountId: string, limit: number = 20): Promise<EaCommandResult[]> => {
+  const result = await backendFetch<{ commands: EaCommandResult[] }>(
+    `/ea/commands?accountId=${accountId}&limit=${limit}`
+  );
+  return result.commands || [];
+};
+
+/**
+ * Poll for command completion (convenience wrapper)
+ * Polls every 2 seconds until command is EXECUTED, FAILED, or EXPIRED
+ */
+export const waitForCommandExecution = async (
+  commandId: string,
+  timeoutMs: number = 30000,
+): Promise<EaCommandResult | null> => {
+  const startTime = Date.now();
+  const pollInterval = 2000;
+
+  while (Date.now() - startTime < timeoutMs) {
+    const command = await getEaCommandStatus(commandId);
+    if (!command) return null;
+
+    if (['EXECUTED', 'FAILED', 'EXPIRED'].includes(command.status)) {
+      return command;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, pollInterval));
+  }
+
+  // Timeout — return last known status
+  return getEaCommandStatus(commandId);
+};
+
 /**
  * Default broker servers
  */
