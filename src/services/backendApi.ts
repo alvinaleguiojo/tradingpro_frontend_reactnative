@@ -421,10 +421,10 @@ export const getTradeHistory = async (
   page: number = 1,
   pageSize: number = 50
 ): Promise<PaginatedResult<any>> => {
-  const userId = await getLoggedInAccountId();
-  const userParam = userId ? `&userId=${userId}` : '';
+  const accountId = await getLoggedInAccountId();
+  const accountParam = accountId ? `&accountId=${accountId}` : '';
   const result = await backendFetch<PaginatedResult<any>>(
-    `/mt5/trade-history?days=${days}${userParam}&page=${page}&pageSize=${pageSize}`
+    `/trading/trades/closed?days=${days}${accountParam}&page=${page}&pageSize=${pageSize}`
   );
   return result;
 };

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, RefreshControl, ActivityIndicator, Modal, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Trade } from '../types';
-import { getOpenTrades, getTradeHistory, modifyOrder } from '../services/backendApi';
+import { getBackendUrl, getLoggedInAccountId, getOpenTrades, getTradeHistory, modifyOrder } from '../services/backendApi';
 
 type FilterType = 'all' | 'open' | 'closed' | 'deposits';
 
@@ -46,6 +46,15 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
   // Open trades state
   const [openTradesItems, setOpenTradesItems] = useState<HistoryItem[]>([]);
   const [isLoadingOpen, setIsLoadingOpen] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<{
+    baseUrl: string;
+    accountId: string | null;
+    closedEndpoint: string;
+    openEndpoint: string;
+    closedCount: number;
+    closedTotal: number;
+    openCount: number;
+  } | null>(null);
 
   // SL/TP Edit Modal State
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -109,6 +118,18 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
       if (pageToFetch === 1) setIsLoading(true);
       else setIsLoadingMore(true);
       const res = await getTradeHistory(90, pageToFetch, pageSize);
+      const baseUrl = await getBackendUrl();
+      const accountId = await getLoggedInAccountId();
+      const accountParam = accountId ? `&accountId=${accountId}` : '';
+      setDebugInfo(prev => ({
+        baseUrl,
+        accountId,
+        closedEndpoint: `/trading/trades/closed?days=90${accountParam}&page=${pageToFetch}&pageSize=${pageSize}`,
+        openEndpoint: prev?.openEndpoint || '/trading/trades/open',
+        closedCount: res.count || 0,
+        closedTotal: res.total || 0,
+        openCount: prev?.openCount || 0,
+      }));
       setTotalPages(res.totalPages || 1);
       setPage(res.page || 1);
       // Store backend-provided totals (across ALL trades, not just this page)
@@ -117,20 +138,20 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
         setTotalProfitAll(res.totalProfit);
       }
       const mapped: HistoryItem[] = (res.data || []).map((trade: any) => {
-        const orderType = String(trade.orderType || trade.dealType || trade.type || '').toUpperCase();
+        const orderType = String(trade.direction || trade.orderType || trade.dealType || trade.type || '').toUpperCase();
         const isBuy = orderType.includes('BUY') || orderType === '0';
         return {
-          id: String(trade.ticket || trade.order),
+          id: String(trade.mt5Ticket || trade.ticket || trade.order || trade.id),
           type: 'trade' as const,
           tradeType: (isBuy ? 'BUY' : 'SELL') as 'BUY' | 'SELL',
           symbol: trade.symbol,
-          volume: safeNumber(trade.lots || trade.closeLots || trade.volume),
-          openPrice: safeNumber(trade.openPrice || trade.price),
-          closePrice: safeNumber(trade.closePrice),
+          volume: safeNumber(trade.lotSize || trade.lots || trade.closeLots || trade.volume),
+          openPrice: safeNumber(trade.entryPrice || trade.openPrice || trade.price),
+          closePrice: safeNumber(trade.exitPrice || trade.closePrice),
           profit: safeNumber(trade.profit),
           status: 'CLOSED' as const,
-          time: trade.closeTime || trade.time || new Date().toISOString(),
-          comment: trade.comment,
+          time: trade.closedAt || trade.closeTime || trade.time || new Date().toISOString(),
+          comment: trade.comment || trade.notes,
         };
       });
       setHistoryItems(prev => append ? [...prev, ...mapped] : mapped);
@@ -148,6 +169,18 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
     setIsLoadingOpen(true);
     try {
       const trades = await getOpenTrades();
+      const baseUrl = await getBackendUrl();
+      const accountId = await getLoggedInAccountId();
+      const accountParam = accountId ? `?accountId=${accountId}` : '';
+      setDebugInfo(prev => ({
+        baseUrl,
+        accountId,
+        closedEndpoint: prev?.closedEndpoint || '/trading/trades/closed',
+        openEndpoint: `/trading/trades/open${accountParam}`,
+        closedCount: prev?.closedCount || 0,
+        closedTotal: prev?.closedTotal || 0,
+        openCount: trades?.length || 0,
+      }));
       const mapped: HistoryItem[] = (trades || []).map((trade: any) => ({
         id: String(trade.mt5Ticket || trade.id),
         type: 'trade' as const,
@@ -464,7 +497,12 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
         {filteredItems.length === 0 && (
           <View style={styles.emptyState}>
             <Ionicons name="document-outline" size={48} color="#3B4A5E" />
-            <Text style={styles.emptyText}>No history found</Text>
+        <Text style={styles.emptyText}>No history found</Text>
+        {debugInfo && (
+          <Text style={styles.debugText}>
+            {`API: ${debugInfo.baseUrl}\nAccount: ${debugInfo.accountId || 'none'}\nOpen: ${debugInfo.openEndpoint}\nClosed: ${debugInfo.closedEndpoint}\nCounts: open ${debugInfo.openCount}, closed ${debugInfo.closedCount}/${debugInfo.closedTotal}`}
+          </Text>
+        )}
           </View>
         )}
         {/* Pagination: Load More Button (only for closed trades tab) */}
@@ -779,6 +817,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     marginTop: 12,
+  },
+  debugText: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 8,
+    textAlign: 'center',
   },
   closeButton: {
     flexDirection: 'row',
