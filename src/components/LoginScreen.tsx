@@ -38,6 +38,26 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [selectedServer, setSelectedServer] = useState<BrokerServer>(BROKER_SERVERS[0]);
   const [showServerPicker, setShowServerPicker] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [webToast, setWebToast] = useState<{
+    type: 'success' | 'error' | 'info';
+    text1: string;
+    text2?: string;
+  } | null>(null);
+
+  const showToast = useCallback((opts: {
+    type: 'success' | 'error' | 'info';
+    text1: string;
+    text2?: string;
+    visibilityTime?: number;
+  }) => {
+    if (Platform.OS === 'web') {
+      setWebToast({ type: opts.type, text1: opts.text1, text2: opts.text2 });
+      const timeout = opts.visibilityTime ?? 3000;
+      setTimeout(() => setWebToast(null), timeout);
+      return;
+    }
+    Toast.show(opts as any);
+  }, []);
   const [isLoading, setIsLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
@@ -79,7 +99,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
   const handleCompanySearch = async () => {
     if (!companySearch.trim()) {
-      Toast.show({
+      showToast({
         type: 'error',
         text1: 'Error',
         text2: 'Please enter a company name to search',
@@ -95,7 +115,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       const results = await searchBrokers(companySearch);
       
       if (results.length === 0) {
-        Toast.show({
+        showToast({
           type: 'info',
           text1: 'No Results',
           text2: 'No servers found for this company. Please try a different name.',
@@ -112,7 +132,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         setSelectedServer(servers[0]);
       }
       
-      Toast.show({
+      showToast({
         type: 'success',
         text1: 'Servers Found',
         text2: `Found ${servers.length} server(s) for ${companySearch}`,
@@ -120,7 +140,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         visibilityTime: 3000,
       });
     } catch (error) {
-      Toast.show({
+      showToast({
         type: 'error',
         text1: 'Search Failed',
         text2: 'Unable to search for brokers. Please check your internet connection.',
@@ -136,7 +156,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     console.log('handleLogin called'); // Debug log
     
     if (!accountNumber.trim()) {
-      Toast.show({
+      showToast({
         type: 'error',
         text1: 'Error',
         text2: 'Please enter your account number',
@@ -146,7 +166,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       return;
     }
     if (!password.trim()) {
-      Toast.show({
+      showToast({
         type: 'error',
         text1: 'Error',
         text2: 'Please enter your password',
@@ -174,7 +194,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
       if (result.success && result.connected) {
         console.log('Connected to MT5 via backend');
-        Toast.show({
+        showToast({
           type: 'success',
           text1: 'Connected!',
           text2: 'Successfully connected to your trading account',
@@ -207,7 +227,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           userMessage = errorMsg.length > 100 ? errorMsg.substring(0, 100) + '...' : errorMsg;
         }
         
-        Toast.show({
+        showToast({
           type: 'error',
           text1: errorTitle,
           text2: userMessage,
@@ -232,7 +252,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         }
       }
       
-      Toast.show({
+      showToast({
         type: 'error',
         text1: 'Connection Failed',
         text2: errorMessage,
@@ -249,6 +269,23 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       colors={['#0D1421', '#1A2332', '#0D1421']}
       style={styles.container}
     >
+      {Platform.OS === 'web' && webToast && (
+        <View
+          style={[
+            styles.webToast,
+            webToast.type === 'success'
+              ? styles.webToastSuccess
+              : webToast.type === 'error'
+              ? styles.webToastError
+              : styles.webToastInfo,
+          ]}
+        >
+          <Text style={styles.webToastTitle}>{webToast.text1}</Text>
+          {webToast.text2 ? (
+            <Text style={styles.webToastMessage}>{webToast.text2}</Text>
+          ) : null}
+        </View>
+      )}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -609,6 +646,39 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#3B4A5E',
     overflow: 'hidden',
+  },
+  webToast: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    right: 20,
+    zIndex: 9999,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+  },
+  webToastSuccess: {
+    backgroundColor: '#0F2E24',
+    borderColor: '#00D4AA',
+  },
+  webToastError: {
+    backgroundColor: '#2E1414',
+    borderColor: '#F43F5E',
+  },
+  webToastInfo: {
+    backgroundColor: '#1E2430',
+    borderColor: '#60A5FA',
+  },
+  webToastTitle: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  webToastMessage: {
+    color: '#E5E7EB',
+    fontSize: 12,
+    marginTop: 2,
   },
   serverOption: {
     flexDirection: 'row',
