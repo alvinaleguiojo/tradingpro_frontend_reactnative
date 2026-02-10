@@ -68,6 +68,8 @@ export default function App(): React.JSX.Element {
   const [isMoneyManagementVisible, setMoneyManagementVisible] = useState<boolean>(false);
   const [isChartVisible, setChartVisible] = useState<boolean>(false);
   const [isChatVisible, setChatVisible] = useState<boolean>(false);
+  const [activationRequired, setActivationRequired] = useState<boolean>(false);
+  const [activationMessage, setActivationMessage] = useState<string>('');
 
   // Responsive hook - must be called at top level, not after conditionals
   const { isDesktop } = useResponsive();
@@ -246,6 +248,17 @@ export default function App(): React.JSX.Element {
     }
   };
 
+  // Fetch activation status from dashboard
+  const fetchActivationStatus = async () => {
+    try {
+      const dashboard = await backendApi.getDashboard(1);
+      setActivationRequired(!!dashboard.activationRequired);
+      setActivationMessage(dashboard.activationMessage || '');
+    } catch (error) {
+      console.warn('Failed to fetch activation status:', error);
+    }
+  };
+
   // Check for saved session on app launch
   useEffect(() => {
     const checkSavedSession = async () => {
@@ -279,12 +292,18 @@ export default function App(): React.JSX.Element {
     // Fetch immediately on login
     fetchAccountSummary();
     fetchAllOrders();
+    fetchActivationStatus();
     
     // Fetch every 5 seconds
     const accountInterval = setInterval(() => {
       fetchAccountSummary();
       fetchAllOrders();
     }, 5000);
+    
+    // Refresh activation status less frequently
+    const activationInterval = setInterval(() => {
+      fetchActivationStatus();
+    }, 30000);
     
     // Fetch real-time price updates from MT5 API
     const fetchQuote = async () => {
@@ -334,6 +353,7 @@ export default function App(): React.JSX.Element {
     
     return () => {
       clearInterval(accountInterval);
+      clearInterval(activationInterval);
       clearInterval(priceInterval);
     };
   }, [isLoggedIn]);
@@ -489,6 +509,18 @@ export default function App(): React.JSX.Element {
     );
   }
 
+  const renderActivationBanner = () => {
+    if (!activationRequired) return null;
+    return (
+      <View style={styles.activationBanner}>
+        <Ionicons name="alert-circle" size={18} color="#F59E0B" />
+        <Text style={styles.activationText}>
+          {activationMessage || 'Account not activated. Please contact admin to activate your account.'}
+        </Text>
+      </View>
+    );
+  };
+
   // Desktop layout with chart sidebar
   const renderDesktopLayout = () => {
     // If Auto Trading is active, show it fullscreen on desktop too
@@ -504,6 +536,7 @@ export default function App(): React.JSX.Element {
           style={styles.desktopScrollView}
           showsVerticalScrollIndicator={false}
         >
+          {renderActivationBanner()}
           <AccountCard 
             account={account} 
             dailyProfit={dailyRealizedProfit}
@@ -600,6 +633,7 @@ export default function App(): React.JSX.Element {
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
         >
+          {renderActivationBanner()}
           <AccountCard 
             account={account} 
             dailyProfit={dailyRealizedProfit}
@@ -734,6 +768,23 @@ const styles = StyleSheet.create({
   loginSafeArea: {
     flex: 1,
     backgroundColor: '#0D1421',
+  },
+  activationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#2A2112',
+    borderColor: '#F59E0B',
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+    borderRadius: 8,
+  },
+  activationText: {
+    color: '#F59E0B',
+    fontSize: 12,
+    flex: 1,
   },
   scrollView: {
     flex: 1,
