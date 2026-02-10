@@ -72,6 +72,7 @@ export const saveLoginCredentials = async (credentials: {
   password: string;
   host: string;
   port: number;
+  serverName?: string;
 }): Promise<void> => {
   await Storage.setItem(LOGIN_CREDENTIALS_KEY, JSON.stringify(credentials));
 };
@@ -87,6 +88,7 @@ export const getSavedCredentials = async (): Promise<{
   password: string;
   host: string;
   port: number;
+  serverName?: string;
 } | null> => {
   try {
     const credentialsStr = await Storage.getItem(LOGIN_CREDENTIALS_KEY);
@@ -250,6 +252,8 @@ export interface DashboardData {
     config: ScalpingConfig;
   };
   mt5Status: Mt5Status;
+  activationRequired?: boolean;
+  activationMessage?: string;
   moneyManagementStatus: MoneyManagementStatus | { error: string };
   tradeStats: TradeStats;
   recentSignals: TradingSignal[];
@@ -710,14 +714,15 @@ export const setMt5Credentials = async (
   user: string,
   password: string,
   host: string,
-  port: number = 443
+  port: number = 443,
+  serverName?: string
 ): Promise<{ success: boolean; connected: boolean; accountInfo?: any; error?: string; message?: string }> => {
   try {
     const baseUrl = await getBackendUrl();
     const response = await fetch(`${baseUrl}/mt5/set-credentials`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user, password, host, port }),
+      body: JSON.stringify({ user, password, host, port, serverName }),
     });
     let data: any = {};
     try {
@@ -943,13 +948,15 @@ export const connectMt5 = async (params: {
   password: string;
   host: string;
   port: number;
+  serverName?: string;
 }): Promise<{ success: boolean; connected: boolean; error?: string }> => {
   // Send to backend first to verify credentials
   const result = await setMt5Credentials(
     params.user.toString(),
     params.password,
     params.host,
-    params.port
+    params.port,
+    params.serverName
   );
   
   // Only save credentials locally if login succeeded

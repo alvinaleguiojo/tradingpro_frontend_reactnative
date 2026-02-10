@@ -167,6 +167,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         password: password,
         host: selectedServer.host,
         port: selectedServer.port,
+        serverName: selectedServer.label,
       });
       
       console.log('connectMt5 result:', result); // Debug log

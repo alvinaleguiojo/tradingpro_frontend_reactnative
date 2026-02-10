@@ -27,6 +27,8 @@ export const AutoTradingScreen: React.FC<AutoTradingScreenProps> = ({ onBack }) 
   const [openTrades, setOpenTrades] = useState<backendApi.Trade[]>([]);
   const [backendConnected, setBackendConnected] = useState(false);
   const [mt5Connected, setMt5Connected] = useState(false);
+  const [activationRequired, setActivationRequired] = useState(false);
+  const [activationMessage, setActivationMessage] = useState('');
   const [toggling, setToggling] = useState(false);
   const [scalpingStatus, setScalpingStatus] = useState<backendApi.ScalpingStatus | null>(null);
   const [togglingScalping, setTogglingScalping] = useState(false);
@@ -48,6 +50,8 @@ export const AutoTradingScreen: React.FC<AutoTradingScreenProps> = ({ onBack }) 
       const dashboard = await backendApi.getDashboard(10);
       
       setMt5Connected(dashboard.mt5Status?.isConnected ?? false);
+      setActivationRequired(!!dashboard.activationRequired);
+      setActivationMessage(dashboard.activationMessage || '');
       setTradingStatus(dashboard.tradingStatus);
       setScalpingStatus(dashboard.scalpingStatus ? {
         enabled: dashboard.scalpingStatus.enabled,
@@ -226,6 +230,15 @@ export const AutoTradingScreen: React.FC<AutoTradingScreenProps> = ({ onBack }) 
           <Text style={styles.connectionText}>{mt5Connected ? 'MT5 Connected' : 'MT5 Not Connected'}</Text>
         </View>
       </View>
+
+      {activationRequired && (
+        <View style={styles.activationBanner}>
+          <Ionicons name="alert-circle" size={18} color="#F59E0B" />
+          <Text style={styles.activationText}>
+            {activationMessage || 'Account not activated. Please contact admin to activate your account.'}
+          </Text>
+        </View>
+      )}
 
       <ScrollView
         style={styles.content}
@@ -541,6 +554,24 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#FFD700',
+    flex: 1,
+  },
+  activationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#2A2112',
+    borderColor: '#F59E0B',
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 8,
+  },
+  activationText: {
+    color: '#F59E0B',
+    fontSize: 12,
     flex: 1,
   },
   connectionStatus: {
