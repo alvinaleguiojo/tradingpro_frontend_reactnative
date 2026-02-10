@@ -176,6 +176,14 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
     fetchOpenTrades();
   }, [fetchTradeHistoryPage, fetchOpenTrades]);
 
+  // Auto-refresh open trades so "Open" tab stays current
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchOpenTrades();
+    }, 10000); // 10s
+    return () => clearInterval(interval);
+  }, [fetchOpenTrades]);
+
   // Load more handler
   const handleLoadMore = () => {
     if (page < totalPages && !isLoadingMore) {
