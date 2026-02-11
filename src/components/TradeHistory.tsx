@@ -34,6 +34,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasLoadedClosed, setHasLoadedClosed] = useState(false);
   const [totalDeposits, setTotalDeposits] = useState(0);
   // Pagination state
   const [page, setPage] = useState(1);
@@ -46,6 +47,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
   // Open trades state
   const [openTradesItems, setOpenTradesItems] = useState<HistoryItem[]>([]);
   const [isLoadingOpen, setIsLoadingOpen] = useState(false);
+  const [hasLoadedOpen, setHasLoadedOpen] = useState(false);
 
   // SL/TP Edit Modal State
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -140,6 +142,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
       setIsLoading(false);
       setIsLoadingMore(false);
       setIsRefreshing(false);
+      if (pageToFetch === 1) setHasLoadedClosed(true);
     }
   }, [pageSize]);
 
@@ -167,6 +170,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
       console.error('Error fetching open trades:', error);
     } finally {
       setIsLoadingOpen(false);
+      setHasLoadedOpen(true);
     }
   }, []);
 
@@ -226,7 +230,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ trades: propTrades, current
   ];
 
 
-  if (isLoading || (filter === 'open' && isLoadingOpen && openTradesItems.length === 0)) {
+  if ((!hasLoadedClosed && isLoading) || (filter === 'open' && !hasLoadedOpen && isLoadingOpen)) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#FFD700" />
