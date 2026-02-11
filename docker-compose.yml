@@ -1,0 +1,16 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mobile-trading-web
+    ports:
+      - "4600:4600"
+    restart: unless-stopped
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-frontend
+    command: tunnel --url http://web:4600
+    depends_on:
+      - web
+    restart: unless-stopped

@@ -33,7 +33,7 @@ const LOGIN_CREDENTIALS_KEY = 'mt5_login_credentials';
 // Use your local IP for physical device testing (e.g., http://192.168.1.4:4000)
 // Use http://localhost:4000 for web browser testing
 // Use http://10.0.2.2:4000 for Android emulator
-const BACKEND_API_URL = 'https://tradingpro-backend-nestjs.vercel.app';
+const BACKEND_API_URL = 'https://peers-soccer-receiving-northern.trycloudflare.com';
 const BACKEND_URL_KEY = 'backend_api_url';
 
 // Get the configured backend URL
