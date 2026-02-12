@@ -29,14 +29,23 @@ const Storage = {
 // Storage keys for local account info
 const LOGIN_CREDENTIALS_KEY = 'mt5_login_credentials';
 
-// Backend API base URL - update this to your computer's IP address
-// Use your local IP for physical device testing (e.g., http://192.168.1.4:4000)
-// Use http://localhost:4000 for web browser testing
-// Use http://10.0.2.2:4000 for Android emulator
-const BACKEND_API_URL = Platform.OS === 'web'
-  ? '/api'
-  : 'https://peers-soccer-receiving-northern.trycloudflare.com';
+// Backend API base URL
+// Web uses nginx proxy (/api -> backend).
+// Mobile uses EXPO_PUBLIC_BACKEND_API_URL when provided, else falls back.
+const MOBILE_BACKEND_API_URL =
+  process.env.EXPO_PUBLIC_BACKEND_API_URL?.trim() ||
+  'https://retirement-peterson-just-migration.trycloudflare.com';
+const BACKEND_API_URL = Platform.OS === 'web' ? '/api' : MOBILE_BACKEND_API_URL;
 const BACKEND_URL_KEY = 'backend_api_url';
+const API_AUTH_TOKEN = process.env.EXPO_PUBLIC_API_AUTH_TOKEN?.trim() || '';
+
+const buildAuthHeaders = (): Record<string, string> => {
+  if (!API_AUTH_TOKEN) return {};
+  return {
+    Authorization: `Bearer ${API_AUTH_TOKEN}`,
+    'X-Api-Key': API_AUTH_TOKEN,
+  };
+};
 
 // Get the configured backend URL
 export const getBackendUrl = async (): Promise<string> => {
@@ -314,6 +323,7 @@ const backendFetch = async <T>(
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...buildAuthHeaders(),
       ...options.headers,
     },
   });
@@ -723,7 +733,10 @@ export const setMt5Credentials = async (
     const baseUrl = await getBackendUrl();
     const response = await fetch(`${baseUrl}/mt5/set-credentials`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...buildAuthHeaders(),
+      },
       body: JSON.stringify({ user, password, host, port, serverName }),
     });
     let data: any = {};
@@ -764,7 +777,10 @@ export const getMt5Status = async (): Promise<{
 }> => {
   try {
     const baseUrl = await getBackendUrl();
-    const response = await fetch(`${baseUrl}/mt5/status`, { method: 'GET' });
+    const response = await fetch(`${baseUrl}/mt5/status`, {
+      method: 'GET',
+      headers: buildAuthHeaders(),
+    });
     const result = await response.json();
     // Backend returns { success, data: { hasCredentials, connected, ... } }
     return {
@@ -803,7 +819,10 @@ export const modifyOrder = async (
 export const checkBackendHealth = async (): Promise<boolean> => {
   try {
     const baseUrl = await getBackendUrl();
-    const response = await fetch(`${baseUrl}/health`, { method: 'GET' });
+    const response = await fetch(`${baseUrl}/health`, {
+      method: 'GET',
+      headers: buildAuthHeaders(),
+    });
     return response.ok;
   } catch {
     return false;
@@ -820,7 +839,10 @@ export const testBackendConnection = async (): Promise<{
 }> => {
   const baseUrl = await getBackendUrl();
   try {
-    const response = await fetch(`${baseUrl}/health`, { method: 'GET' });
+    const response = await fetch(`${baseUrl}/health`, {
+      method: 'GET',
+      headers: buildAuthHeaders(),
+    });
     return {
       connected: response.ok,
       url: baseUrl,
